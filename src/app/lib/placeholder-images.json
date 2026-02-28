@@ -1,0 +1,28 @@
+{
+  "placeholderImages": [
+    {
+      "id": "vendor-logo-placeholder",
+      "description": "Default vendor logo placeholder",
+      "imageUrl": "https://placehold.co/128x128/e9f4fb/289ce2?text=Z",
+      "imageHint": "logo placeholder"
+    },
+    {
+      "id": "promo-placeholder",
+      "description": "Default promotion image placeholder",
+      "imageUrl": "https://placehold.co/600x400/e9f4fb/289ce2?text=Deal",
+      "imageHint": "promotion deal"
+    },
+    {
+      "id": "about-us-hero",
+      "description": "Hero image for the About Us page",
+      "imageUrl": "https://picsum.photos/seed/zippteam/800/400",
+      "imageHint": "diverse team meeting"
+    },
+    {
+      "id": "for-vendors-hero",
+      "description": "Hero image for the For Vendors page",
+      "imageUrl": "https://picsum.photos/seed/zippvendor/800/400",
+      "imageHint": "happy business owner"
+    }
+  ]
+}

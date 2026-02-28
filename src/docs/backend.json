@@ -1,0 +1,1426 @@
+
+
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user. (doc id = uid from Firebase Auth)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The user's full name."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        },
+        "phone": {
+          "type": "string",
+          "description": "The user's phone number (optional)."
+        },
+        "dob": {
+          "type": "string",
+          "description": "The user's date of birth.",
+          "format": "date"
+        },
+        "gender": {
+          "type": "string",
+          "description": "The user's gender (male, female, other, or prefer_not_to_say).",
+          "enum": ["male", "female", "other", "prefer_not_to_say"]
+        },
+        "profession": {
+          "type": "string",
+          "description": "The user's profession (optional)."
+        },
+        "role": {
+          "type": "string",
+          "description": "The user's role (user, vendor, or admin)."
+        },
+        "region": {
+          "type": "string",
+          "description": "The region the user is located in."
+        },
+        "location": {
+          "type": "string",
+          "description": "The user's geographical location (optional)."
+        },
+        "favourites": {
+          "type": "array",
+          "description": "References to favourite Vendors. (Relationship: User 1:N Vendor)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "collectedPromotions": {
+            "type": "array",
+            "description": "An array of active promotion collections, each being a unique instance.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "promotionId": { "type": "string" },
+                    "vendorId": { "type": "string" },
+                    "collectedAt": { "type": "string", "format": "date-time" },
+                    "redemptionId": { "type": "string" }
+                },
+                "required": ["promotionId", "vendorId", "collectedAt", "redemptionId"]
+            }
+        },
+        "redeemedPromotions": {
+          "type": "array",
+          "description": "An array of unique promotion IDs that the user has redeemed, for display in their history.",
+          "items": { "type": "string" }
+        },
+        "uncollectedPromotions": {
+          "type": "array",
+          "description": "An array of promotion IDs that the user has uncollected.",
+          "items": { "type": "string" }
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp of when the user was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp of when the user was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "email",
+        "role",
+        "region",
+        "dob",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Vendor": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Vendor",
+      "type": "object",
+      "description": "Represents a vendor in the application.",
+      "properties": {
+        "vendorId": {
+          "type": "string",
+          "description": "Unique identifier for the vendor."
+        },
+        "categoryId": {
+          "type": "string",
+          "description": "Reference to Category. (Relationship: Category 1:N Vendor)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the vendor."
+        },
+        "normalizedName": {
+            "type": "string",
+            "description": "A normalized version of the name for case-insensitive, punctuation-agnostic lookups."
+        },
+        "searchableName": {
+          "type": "string",
+          "description": "Lowercase version of the name for case-insensitive search."
+        },
+        "logoUrl": {
+          "type": "string",
+          "description": "URL of the vendor's logo."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the vendor."
+        },
+        "region": {
+          "type": "string",
+          "description": "The region the vendor is located in."
+        },
+        "lat": {
+          "type": "number",
+          "description": "The latitude of the vendor's location."
+        },
+        "lng": {
+          "type": "number",
+          "description": "The longitude of the vendor's location."
+        },
+        "address": {
+          "type": "string",
+          "description": "The vendor's address."
+        },
+        "city": {
+          "type": "string",
+          "description": "The city the vendor is located in."
+        },
+        "state": {
+          "type": "string",
+          "description": "The state the vendor is located in."
+        },
+        "country": {
+          "type": "string",
+          "description": "The country the vendor is located in."
+        },
+        "phone": {
+          "type": "string",
+          "description": "The vendor's phone number."
+        },
+        "email": {
+          "type": "string",
+          "description": "The vendor's email address.",
+          "format": "email"
+        },
+        "website": {
+          "type": "string",
+          "description": "The vendor's website URL.",
+          "format": "uri"
+        },
+        "socials": {
+          "type": "string",
+          "description": "The vendor's social media links."
+        },
+        "operatingHours": {
+          "type": "object",
+          "description": "The vendor's operating hours."
+        },
+        "googlePlaceId": {
+          "type": "string",
+          "description": "The unique ID from the Google Places API."
+        },
+        "googleRating": {
+          "type": "number",
+          "description": "The vendor's rating from Google."
+        },
+        "googleReviewCount": {
+          "type": "number",
+          "description": "The number of reviews for the vendor from Google."
+        },
+        "photos": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Array of photo URLs from Google Places."
+        },
+        "priceLevel": {
+            "type": "number",
+            "description": "The price level of the place, from 0 to 4."
+        },
+        "types": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Array of types assigned by Google (e.g., 'car_wash')."
+        },
+        "googleLastSyncedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of the last sync with Google Places."
+        },
+        "zippRating": {
+          "type": "number",
+          "description": "The vendor's internal rating from Zipp users."
+        },
+        "zippReviewCount": {
+          "type": "number",
+          "description": "The number of internal reviews from Zipp users."
+        },
+        "tags": {
+          "type": "array",
+          "description": "Tags associated with the vendor.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "searchableTags": {
+            "type": "array",
+            "description": "Lowercase version of tags for case-insensitive search.",
+            "items": {
+                "type": "string"
+            }
+        },
+        "modulesEnabled": {
+          "type": "array",
+          "description": "Modules enabled for the vendor.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "metadata": {
+          "type": "string",
+          "description": "Additional metadata about the vendor."
+        },
+        "dedupeConfidence": {
+            "type": "number",
+            "description": "A 0-1 score for the AI's confidence in a deduplication match."
+        },
+        "googleSyncLocked": {
+            "type": "boolean",
+            "description": "A manual override to prevent automatic updates from Google sync."
+        },
+        "subscriptionStatus": {
+          "type": "string",
+          "description": "The vendor's subscription status.",
+          "enum": ["pending_verification", "trial", "free", "paid", "pay-as-you-go", "claimed_pending_approval", "suspended"]
+        },
+        "trialStartedAt": {
+          "type": "string",
+          "description": "Timestamp of when the vendor's trial period started.",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp of when the vendor was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp of when the vendor was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "vendorId",
+        "name",
+        "normalizedName",
+        "searchableName",
+        "categoryId",
+        "logoUrl",
+        "description",
+        "region",
+        "lat",
+        "lng",
+        "address",
+        "phone",
+        "email",
+        "tags",
+        "searchableTags",
+        "modulesEnabled",
+        "subscriptionStatus",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Category": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Category",
+      "type": "object",
+      "description": "Represents a category of vendors.",
+      "properties": {
+        "categoryId": {
+          "type": "string",
+          "description": "Unique identifier for the category."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the category."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the category."
+        },
+        "iconUrl": {
+          "type": "string",
+          "description": "URL of the category's icon."
+        },
+        "modulesAvailable": {
+          "type": "array",
+          "description": "List of modules available for this category.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "defaultModules": {
+          "type": "array",
+          "description": "Modules enabled by default when vendor selects this category.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "fieldsSchema": {
+          "type": "array",
+          "description": "Schema definition when creating a vendor of this category.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp of when the category was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp of when the category was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "categoryId",
+        "name",
+        "description",
+        "iconUrl",
+        "modulesAvailable",
+        "defaultModules",
+        "fieldsSchema",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Promotion": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Promotion",
+      "type": "object",
+      "description": "Represents a promotion offered by a vendor.",
+      "properties": {
+        "promotionId": {
+          "type": "string",
+          "description": "Unique identifier for the promotion."
+        },
+        "vendorId": {
+          "type": "string",
+          "description": "Reference to Vendor. (Relationship: Vendor 1:N Promotion)"
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the promotion."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the promotion."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL of the promotion's image."
+        },
+        "startAt": {
+          "type": "string",
+          "description": "Timestamp of when the promotion starts.",
+          "format": "date-time"
+        },
+        "endAt": {
+          "type": "string",
+          "description": "Timestamp of when the promotion ends.",
+          "format": "date-time"
+        },
+        "terms": {
+          "type": "string",
+          "description": "The terms and conditions of the promotion."
+        },
+        "redemptionType": {
+          "type": "string",
+          "description": "The type of redemption for the promotion (qr, code, in-store)."
+        },
+        "quota": {
+          "type": "number",
+          "description": "The number of redemptions allowed for the promotion."
+        },
+        "redemptions": {
+            "type": "array",
+            "description": "An array of individual redemption events for analytics.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "redemptionId": { "type": "string" },
+                    "userId": { "type": "string" },
+                    "status": { "type": "string", "enum": ["collected", "redeemed"] },
+                    "collectedAt": { "type": "string", "format": "date-time" },
+                    "redeemedAt": { "type": "string", "format": "date-time" }
+                },
+                "required": ["redemptionId", "userId", "status", "collectedAt"]
+            }
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp of when the promotion was created.",
+          "format": "date-time"
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "The user who created the promotion."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp of when the promotion was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "promotionId",
+        "vendorId",
+        "title",
+        "description",
+        "imageUrl",
+        "startAt",
+        "endAt",
+        "terms",
+        "redemptionType",
+        "createdAt",
+        "createdBy",
+        "updatedAt"
+      ]
+    },
+    "TodaysHotDeals": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Today's Hot Deals",
+        "type": "object",
+        "description": "A singleton document containing a curated list of promotions to be featured for the day.",
+        "properties": {
+            "promotions": {
+                "type": "array",
+                "description": "An array of full promotion objects.",
+                "items": { "$ref": "#/entities/Promotion" }
+            },
+            "updatedAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Timestamp of when the list was last updated."
+            }
+        },
+        "required": ["promotions", "updatedAt"]
+    },
+    "Offering": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Offering",
+      "type": "object",
+      "description": "Represents a product or service offered by a vendor.",
+      "properties": {
+        "offeringId": {
+          "type": "string",
+          "description": "Unique identifier for the offering."
+        },
+        "vendorId": {
+          "type": "string",
+          "description": "Reference to Vendor. (Relationship: Vendor 1:N Offering)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the offering."
+        },
+        "searchableName": {
+            "type": "string",
+            "description": "Lowercase version of name for case-insensitive search."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the offering."
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "product",
+            "service"
+          ],
+          "description": "The type of the offering."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the offering is currently available."
+        },
+        "pricingModel": {
+          "type": "string",
+          "enum": [
+            "fixed",
+            "per_hour",
+            "per_unit"
+          ],
+          "description": "The pricing model for a service."
+        },
+        "price": {
+          "type": "number",
+          "description": "The price of the offering."
+        },
+        "currency": {
+          "type": "string",
+          "description": "The currency of the offering's price."
+        },
+        "inStock": {
+          "type": "boolean",
+          "description": "The stock status of the product."
+        },
+        "sku": {
+          "type": "string",
+          "description": "The stock keeping unit of the product."
+        },
+        "images": {
+          "type": "array",
+          "description": "URLs of the offering's images.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "customFields": {
+          "type": "object",
+          "description": "Dynamic fields based on the vendor's main category."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp of when the offering was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp of when the offering was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "offeringId",
+        "vendorId",
+        "name",
+        "searchableName",
+        "type",
+        "isActive",
+        "price",
+        "currency",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Order": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Order",
+      "type": "object",
+      "description": "Represents an order placed by a user.",
+      "properties": {
+        "orderId": {
+          "type": "string",
+          "description": "Unique identifier for the order."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Order)"
+        },
+        "vendorId": {
+          "type": "string",
+          "description": "Reference to Vendor. (Relationship: Vendor 1:N Order)"
+        },
+        "items": {
+          "type": "array",
+          "description": "List of items in the order.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "The total amount of the order."
+        },
+        "currency": {
+          "type": "string",
+          "description": "The currency of the order's total amount."
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the order (pending, ready_for_pickup, collected, cancelled)."
+        },
+        "pickupCode": {
+          "type": "string",
+          "description": "The pickup code for the order."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp of when the order was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp of when the order was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "orderId",
+        "userId",
+        "vendorId",
+        "items",
+        "totalAmount",
+        "currency",
+        "status",
+        "pickupCode",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Booking": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Booking",
+      "type": "object",
+      "description": "Represents a booking made by a user.",
+      "properties": {
+        "bookingId": {
+          "type": "string",
+          "description": "Unique identifier for the booking."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Booking)"
+        },
+        "vendorId": {
+          "type": "string",
+          "description": "Reference to Vendor. (Relationship: Vendor 1:N Booking)"
+        },
+        "service": {
+          "type": "string",
+          "description": "The service booked."
+        },
+        "dateTime": {
+          "type": "string",
+          "description": "Timestamp of when the booking is scheduled.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the booking (pending, confirmed, in_progress, completed, cancelled)."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional notes for the booking."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp of when the booking was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp of when the booking was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "bookingId",
+        "userId",
+        "vendorId",
+        "service",
+        "dateTime",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Listing": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Listing",
+      "type": "object",
+      "description": "Represents a listing for buy/sell.",
+      "properties": {
+        "listingId": {
+          "type": "string",
+          "description": "Unique identifier for the listing."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Listing)"
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the listing."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the listing."
+        },
+        "condition": {
+          "type": "string",
+          "description": "The condition of the listed item."
+        },
+        "images": {
+          "type": "array",
+          "description": "URLs of the listing's images.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "price": {
+          "type": "number",
+          "description": "The price of the listed item."
+        },
+        "currency": {
+          "type": "string",
+          "description": "The currency of the listing's price."
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the listing (open, sold, removed)."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp of when the listing was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp of when the listing was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "listingId",
+        "userId",
+        "title",
+        "description",
+        "condition",
+        "images",
+        "price",
+        "currency",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Offer": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Offer",
+      "type": "object",
+      "description": "Represents an offer made on a listing.",
+      "properties": {
+        "offerId": {
+          "type": "string",
+          "description": "Unique identifier for the offer."
+        },
+        "listingId": {
+          "type": "string",
+          "description": "Reference to Listing. (Relationship: Listing 1:N Offer)"
+        },
+        "vendorId": {
+          "type": "string",
+          "description": "Reference to Vendor. (Relationship: Vendor 1:N Offer)"
+        },
+        "amount": {
+          "type": "number",
+          "description": "The amount offered."
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the offer (pending, accepted, rejected)."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp of when the offer was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp of when the offer was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "offerId",
+        "listingId",
+        "vendorId",
+        "amount",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Review": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Review",
+      "type": "object",
+      "description": "Represents a review written by a user for a vendor.",
+      "properties": {
+        "reviewId": { "type": "string", "description": "Unique identifier for the review." },
+        "vendorId": { "type": "string", "description": "Reference to the Vendor being reviewed." },
+        "userId": { "type": "string", "description": "Reference to the User who wrote the review." },
+        "userName": { "type": "string", "description": "Denormalized name of the user for display." },
+        "userAvatar": { "type": "string", "description": "Denormalized avatar URL of the user." },
+        "rating": { "type": "number", "description": "The rating given, from 1 to 5." },
+        "text": { "type": "string", "description": "The written content of the review." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reviewId", "vendorId", "userId", "rating", "text", "createdAt"]
+    },
+    "ScrapeCache": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ScrapeCache",
+      "type": "object",
+      "description": "Represents the cache for scraped data.",
+      "properties": {
+        "cacheId": {
+          "type": "string",
+          "description": "Unique identifier for the cache entry."
+        },
+        "serviceKeyword": {
+          "type": "string",
+          "description": "The keyword used for scraping."
+        },
+        "region": {
+          "type": "string",
+          "description": "The region for which the data was scraped."
+        },
+        "source": {
+          "type": "string",
+          "description": "The source of the scraped data (e.g., google_places, serper)."
+        },
+        "apiResponse": {
+          "type": "string",
+          "description": "The raw JSON response from the API."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp of when the cache entry was created.",
+          "format": "date-time"
+        },
+        "expiresAt": {
+          "type": "string",
+          "description": "Timestamp of when the cache entry expires.",
+          "format": "date-time"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional notes about the cache entry."
+        }
+      },
+      "required": [
+        "cacheId",
+        "serviceKeyword",
+        "region",
+        "source",
+        "apiResponse",
+        "createdAt",
+        "expiresAt"
+      ]
+    },
+    "GeocodeCache": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "GeocodeCache",
+      "type": "object",
+      "description": "Caches results from the geocoding service to reduce API calls.",
+      "properties": {
+        "query": { "type": "string", "description": "The normalized user search query." },
+        "formattedAddress": { "type": "string" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "type": { "type": "string" },
+        "priority": { "type": "number" },
+        "lastSearched": { "type": "string", "format": "date-time" }
+      },
+      "required": ["query", "latitude", "longitude", "lastSearched"]
+    },
+    "Redemption": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Redemption",
+      "type": "object",
+      "description": "Represents a redemption of a promotion.",
+      "properties": {
+        "redemptionId": {
+          "type": "string",
+          "description": "Unique identifier for the redemption."
+        },
+        "promotionId": {
+          "type": "string",
+          "description": "Reference to Promotion. (Relationship: Promotion 1:N Redemption)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Redemption)"
+        },
+        "vendorId": {
+          "type": "string",
+          "description": "Reference to Vendor. (Relationship: Vendor 1:N Redemption)"
+        },
+        "redeemedAt": {
+          "type": "string",
+          "description": "Timestamp of when the promotion was redeemed.",
+          "format": "date-time"
+        },
+        "method": {
+          "type": "string",
+          "description": "The method of redemption (qr, code, in-store)."
+        },
+        "metadata": {
+          "type": "string",
+          "description": "Additional metadata about the redemption."
+        }
+      },
+      "required": [
+        "redemptionId",
+        "promotionId",
+        "userId",
+        "vendorId",
+        "redeemedAt",
+        "method"
+      ]
+    },
+    "Subscription": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Subscription",
+      "type": "object",
+      "description": "Represents a vendor's subscription.",
+      "properties": {
+        "subscriptionId": {
+          "type": "string",
+          "description": "Unique identifier for the subscription."
+        },
+        "vendorId": {
+          "type": "string",
+          "description": "Reference to Vendor. (Relationship: Vendor 1:N Subscription)"
+        },
+        "planId": {
+          "type": "string",
+          "description": "The ID of the subscription plan."
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the subscription (active, past_due, cancelled)."
+        },
+        "stripeSubscriptionId": {
+          "type": "string",
+          "description": "The ID of the subscription in Stripe."
+        },
+        "startedAt": {
+          "type": "string",
+          "description": "Timestamp of when the subscription started.",
+          "format": "date-time"
+        },
+        "endedAt": {
+          "type": "string",
+          "description": "Timestamp of when the subscription ended.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "vendorId",
+        "planId",
+        "status",
+        "stripeSubscriptionId",
+        "startedAt",
+        "endedAt"
+      ]
+    },
+    "AdminConfig": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AdminConfig",
+      "type": "object",
+      "description": "Represents the global admin configuration.",
+      "properties": {
+        "stripePublicKey": {
+          "type": "string",
+          "description": "The Stripe public key."
+        },
+        "stripeSecretKey": {
+          "type": "string",
+          "description": "The Stripe secret key."
+        },
+        "googlePlacesApiKey": {
+          "type": "string",
+          "description": "The Google Places API key."
+        },
+        "cacheTTLs": {
+          "type": "string",
+          "description": "Cache TTLs for different services."
+        },
+        "modulesMasterList": {
+          "type": "array",
+          "description": "Master list of available modules.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "regionsMasterList": {
+          "type": "array",
+          "description": "Master list of available regions.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "activityLogConfig": {
+            "type": "object",
+            "description": "Configuration to enable/disable specific activity logs.",
+            "properties": {
+                "login": { "type": "boolean" },
+                "location_search": { "type": "boolean" },
+                "category_browse": { "type": "boolean" },
+                "get_current_location": { "type": "boolean" },
+                "view_vendor": { "type": "boolean" },
+                "redeem_promotion": { "type": "boolean" }
+            }
+        }
+      },
+      "required": []
+    },
+    "UserActivityLog": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User Activity Log",
+      "type": "object",
+      "description": "Records user activities for analytics and reporting.",
+      "properties": {
+        "logId": {
+          "type": "string",
+          "description": "Unique identifier for the log entry."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the user who performed the activity."
+        },
+        "activityType": {
+          "type": "string",
+          "enum": [
+            "login",
+            "location_search",
+            "category_browse",
+            "get_current_location",
+            "view_vendor",
+            "redeem_promotion"
+          ],
+          "description": "The type of activity performed."
+        },
+        "data": {
+          "type": "object",
+          "description": "Contextual data about the activity (e.g., search query, vendorId)."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp of when the activity occurred.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "logId",
+        "userId",
+        "activityType",
+        "createdAt"
+      ]
+    },
+    "Analytics": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Analytics",
+      "description": "Stores aggregated analytics data for Firestore usage.",
+      "type": "object",
+      "properties": {
+        "month": {
+          "type": "string",
+          "description": "The month of the analytics data in YYYY-MM format."
+        },
+        "reads": {
+          "type": "number",
+          "description": "Total number of document reads for the month."
+        },
+        "writes": {
+          "type": "number",
+          "description": "Total number of document writes for the month."
+        },
+        "deletes": {
+          "type": "number",
+          "description": "Total number of document deletes for the month."
+        }
+      },
+      "required": ["month", "reads", "writes", "deletes"]
+    },
+    "ZippHighlights": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Zipp Highlights",
+      "type": "object",
+      "description": "A singleton document containing a list of full vendor objects to be featured as highlights.",
+      "properties": {
+          "vendors": {
+              "type": "array",
+              "description": "An array of 8 full vendor objects.",
+              "items": { "$ref": "#/entities/Vendor" }
+          },
+          "updatedAt": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Timestamp of when the list was last updated."
+          }
+      },
+      "required": ["vendors", "updatedAt"]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous",
+      "phone"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles. Document ID is the Firebase Auth UID. Includes user role for authorization independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Auth UID of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "vendors/{vendorId}",
+        "definition": {
+          "entityName": "Vendor",
+          "schema": {
+            "$ref": "#/backend/entities/Vendor"
+          },
+          "description": "Stores vendor profiles. VendorId is the document ID.",
+          "params": [
+            {
+              "name": "vendorId",
+              "description": "The unique identifier for the vendor."
+            }
+          ]
+        }
+      },
+      {
+        "path": "zippHighlights/singleton",
+        "definition": {
+          "entityName": "ZippHighlights",
+          "schema": { "$ref": "#/backend/entities/ZippHighlights" },
+          "description": "A singleton document containing an array of 8 full vendor objects to be featured as Zipp Highlights on the homepage. This document is updated periodically by a scheduled Cloud Function.",
+          "params": []
+        }
+      },
+      {
+        "path": "vendors/{vendorId}/offerings/{offeringId}",
+        "definition": {
+          "entityName": "Offering",
+          "schema": {
+            "$ref": "#/backend/entities/Offering"
+          },
+          "description": "Stores products or services offered by a vendor. This is a sub-collection of a vendor.",
+          "params": [
+            {
+              "name": "vendorId",
+              "description": "The unique identifier for the vendor."
+            },
+            {
+              "name": "offeringId",
+              "description": "The unique identifier for the offering."
+            }
+          ]
+        }
+      },
+       {
+        "path": "vendors/{vendorId}/reviews/{reviewId}",
+        "definition": {
+          "entityName": "Review",
+          "schema": { "$ref": "#/backend/entities/Review" },
+          "description": "Stores user reviews for a specific vendor. This is a sub-collection of a vendor.",
+          "params": [
+            { "name": "vendorId", "description": "The unique identifier for the vendor." },
+            { "name": "reviewId", "description": "The unique identifier for the review." }
+          ]
+        }
+      },
+      {
+        "path": "categories/{categoryId}",
+        "definition": {
+          "entityName": "Category",
+          "schema": {
+            "$ref": "#/backend/entities/Category"
+          },
+          "description": "Stores vendor categories. CategoryId is the document ID.",
+          "params": [
+            {
+              "name": "categoryId",
+              "description": "The unique identifier for the category."
+            }
+          ]
+        }
+      },
+      {
+        "path": "promotions/{promotionId}",
+        "definition": {
+          "entityName": "Promotion",
+          "schema": {
+            "$ref": "#/backend/entities/Promotion"
+          },
+          "description": "Stores promotions offered by vendors. PromotionId is the document ID. Includes denormalized vendorId for authorization independence.",
+          "params": [
+            {
+              "name": "promotionId",
+              "description": "The unique identifier for the promotion."
+            }
+          ]
+        }
+      },
+      {
+        "path": "orders/{orderId}",
+        "definition": {
+          "entityName": "Order",
+          "schema": {
+            "$ref": "#/backend/entities/Order"
+          },
+          "description": "Stores orders placed by users. OrderId is the document ID. Includes userId and vendorId for authorization independence.",
+          "params": [
+            {
+              "name": "orderId",
+              "description": "The unique identifier for the order."
+            }
+          ]
+        }
+      },
+      {
+        "path": "bookings/{bookingId}",
+        "definition": {
+          "entityName": "Booking",
+          "schema": {
+            "$ref": "#/backend/entities/Booking"
+          },
+          "description": "Stores bookings made by users. BookingId is the document ID. Includes userId and vendorId for authorization independence.",
+          "params": [
+            {
+              "name": "bookingId",
+              "description": "The unique identifier for the booking."
+            }
+          ]
+        }
+      },
+      {
+        "path": "listings/{listingId}",
+        "definition": {
+          "entityName": "Listing",
+          "schema": {
+            "$ref": "#/backend/entities/Listing"
+          },
+          "description": "Stores listings created by users. ListingId is the document ID. Includes userId for authorization independence.",
+          "params": [
+            {
+              "name": "listingId",
+              "description": "The unique identifier for the listing."
+            }
+          ]
+        }
+      },
+      {
+        "path": "offers/{offerId}",
+        "definition": {
+          "entityName": "Offer",
+          "schema": {
+            "$ref": "#/backend/entities/Offer"
+          },
+          "description": "Stores offers made on listings. OfferId is the document ID. Includes listingId and vendorId for authorization independence.",
+          "params": [
+            {
+              "name": "offerId",
+              "description": "The unique identifier for the offer."
+            }
+          ]
+        }
+      },
+      {
+        "path": "scrapeCache/{cacheId}",
+        "definition": {
+          "entityName": "ScrapeCache",
+          "schema": {
+            "$ref": "#/backend/entities/ScrapeCache"
+          },
+          "description": "Stores cached scraped data. CacheId is the document ID.  Accessible only by admin and Cloud Functions.",
+          "params": [
+            {
+              "name": "cacheId",
+              "description": "The unique identifier for the cache entry."
+            }
+          ]
+        }
+      },
+       {
+        "path": "geocodeCache/{query}",
+        "definition": {
+          "entityName": "GeocodeCache",
+          "schema": { "$ref": "#/backend/entities/GeocodeCache" },
+          "description": "Stores geocoding results to minimize external API calls. Document ID is the normalized search query.",
+          "params": [
+            { "name": "query", "description": "The normalized search query used for caching." }
+          ]
+        }
+      },
+      {
+        "path": "redemptions/{redemptionId}",
+        "definition": {
+          "entityName": "Redemption",
+          "schema": {
+            "$ref": "#/backend/entities/Redemption"
+          },
+          "description": "Stores promotion redemptions. RedemptionId is the document ID. Includes promotionId, userId, and vendorId for authorization independence.",
+          "params": [
+            {
+              "name": "redemptionId",
+              "description": "The unique identifier for the redemption."
+            }
+          ]
+        }
+      },
+      {
+        "path": "subscriptions/{subscriptionId}",
+        "definition": {
+          "entityName": "Subscription",
+          "schema": {
+            "$ref": "#/backend/entities/Subscription"
+          },
+          "description": "Stores vendor subscriptions. SubscriptionId is the document ID. Includes vendorId for authorization independence.",
+          "params": [
+            {
+              "name": "subscriptionId",
+              "description": "The unique identifier for the subscription."
+            }
+          ]
+        }
+      },
+      {
+        "path": "adminConfig/global",
+        "definition": {
+          "entityName": "AdminConfig",
+          "schema": {
+            "$ref": "#/backend/entities/AdminConfig"
+          },
+          "description": "Stores global admin configuration. This is a singleton document.",
+          "params": []
+        }
+      },
+      {
+        "path": "userActivityLogs/{logId}",
+        "definition": {
+          "entityName": "UserActivityLog",
+          "schema": {
+            "$ref": "#/backend/entities/UserActivityLog"
+          },
+          "description": "Records user activities for analytics. Write-only for users.",
+          "params": [
+            {
+              "name": "logId",
+              "description": "The unique identifier for the log entry."
+            }
+          ]
+        }
+      },
+      {
+        "path": "analytics/{month}",
+        "definition": {
+          "entityName": "Analytics",
+          "schema": {
+            "$ref": "#/backend/entities/Analytics"
+          },
+          "description": "Stores aggregated monthly analytics data. Document ID is 'YYYY-MM'. Read-only for admins.",
+          "params": [
+            {
+              "name": "month",
+              "description": "The month of the analytics data in YYYY-MM format."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to support a modular, role-based super-app, Zipp. Key considerations include: \n\n1.  **Authorization Independence:** Denormalization is used extensively to avoid `get()` calls in security rules. For example, the `users` collection stores the user's `role`, eliminating the need to fetch user data when validating operations on other collections.  This makes authorization rules simpler, robust, and easily debuggable. The `vendorId` is included in related entities like `promotions`, `orders`, `bookings`, and `redemptions` to avoid needing to fetch the parent vendor document for authorization.\n2.  **Structural Segregation:** Data with different access requirements is separated into distinct collections. User-generated content (listings) and vendor-managed content (promotions, offerings) are stored in separate collections, each with appropriate security rules. Offerings and Reviews are now a sub-collection of vendors.\n3.  **Access Modeling:** User-owned data (listings, orders, bookings) are stored under the `/users/{userId}` path, enabling path-based authorization. Vendor-owned data is stored in a subcollection under the vendor document, which allows for strong ownership rules.\n4.  **Performance Optimization:** Singleton documents like `featuredMerchants` and `todaysHotDeals` cache curated data, populated by scheduled Cloud Functions. This avoids costly, scalable queries on every homepage load, thus reducing read operations and preventing quota exhaustion. With the removal of the root /offerings collection, search performance is now tied directly to Firestore's indexing capabilities on the /vendors collection, simplifying the architecture.\n\nSpecific denormalization strategies:\n\n*   User `role` is stored directly in the `users` collection, so rules can validate user roles without additional reads.\n*   `vendorId` is included on all vendor-related documents to allow validation of vendor ownership without reading the vendor document.\n* A `geocodeCache` collection has been added to cache results from the Nominatim API, reducing API calls and improving performance. The document ID is the normalized search query.\n* A `userActivityLogs` collection has been added to record user actions. It is write-only for users to ensure data integrity.\n* An `analytics` collection has been added to store monthly aggregated usage data. It is read-only for admins."
+  }
+}
+
+
+
+    
+
+    

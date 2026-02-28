@@ -1,0 +1,16 @@
+{
+  "placeholderImages": [
+    {
+      "id": "vendor-logo-placeholder",
+      "description": "Default vendor logo placeholder",
+      "imageUrl": "https://placehold.co/128x128/e9f5fb/2cb7de?text=Z",
+      "imageHint": "logo placeholder"
+    },
+    {
+      "id": "promo-placeholder",
+      "description": "Default promotion image placeholder",
+      "imageUrl": "https://placehold.co/600x400/e9f5fb/2cb7de?text=Deal",
+      "imageHint": "promotion deal"
+    }
+  ]
+}

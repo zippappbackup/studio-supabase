@@ -1,0 +1,23 @@
+
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Allow public read access to all files.
+    // This allows the app to download vendor snapshots and display any public images.
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if false; // Explicitly deny public writes
+    }
+    
+    // Secure user uploads. A user can only write to their own folder within 'uploads'.
+    // This rule is for client-side uploads, like logos or promotion images.
+    // The backend functions writing snapshots bypass these rules.
+    match /uploads/{userId}/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.uid == userId
+                    && request.resource.size < 5 * 1024 * 1024 // Limit file size to 5MB
+                    && request.resource.contentType.matches('image/.*'); // Allow any image type
+    }
+  }
+}

@@ -1,0 +1,124 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%; /* #ffffff */
+    --foreground: 211 49% 20%; /* #253146 */
+
+    --card: 211 100% 98%; /* #f7fafd */
+    --card-foreground: 211 49% 20%;
+
+    --popover: 211 100% 98%;
+    --popover-foreground: 211 49% 20%;
+
+    --primary: 212 71% 73%; /* #89b3dc */
+    --primary-foreground: 211 49% 20%;
+
+    --secondary: 211 100% 91%; /* #d6eafa */
+    --secondary-foreground: 211 49% 20%;
+
+    --muted: 211 100% 91%;
+    --muted-foreground: 211 30% 50%;
+
+    --accent: 211 44% 52%; /* #688cc0 */
+    --accent-foreground: 210 100% 94%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 218 56% 90%; /* #d6e1f5 */
+    --input: 218 56% 90%; /* #d6e1f5 */
+    --ring: 212 71% 73%; /* #89b3dc */
+
+    --chart-1: 212 71% 73%;
+    --chart-2: 211 44% 52%;
+    --chart-3: 212 33% 25%;
+    --chart-4: 211 44% 40%;
+    --chart-5: 212 33% 30%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 212 33% 20%;
+    --foreground: 210 100% 94%; 
+
+    --card: 212 33% 22%;
+    --card-foreground: 210 100% 94%;
+
+    --popover: 212 33% 15%;
+    --popover-foreground: 210 100% 94%;
+
+    --primary: 211 44% 52%;
+    --primary-foreground: 210 27% 98%;
+
+    --secondary: 212 33% 25%;
+    --secondary-foreground: 210 100% 94%;
+
+    --muted: 212 33% 25%;
+    --muted-foreground: 210 100% 85%;
+
+    --accent: 212 71% 73%;
+    --accent-foreground: 212 33% 20%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 212 33% 25%;
+    --input: 212 33% 30%;
+    --ring: 211 44% 52%;
+
+    --chart-1: 211 44% 52%;
+    --chart-2: 212 71% 73%;
+    --chart-3: 210 27% 98%;
+    --chart-4: 211 44% 40%;
+    --chart-5: 212 33% 30%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html, body {
+    @apply min-h-screen overflow-x-hidden;
+    font-size: 82%; /* Adjusted from 80% for 2% increase */
+    overscroll-behavior-y: contain;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* Add the background style for the login page */
+  .login-page-background {
+    background-image: url("data:image/svg+xml,%3Csvg id='patternId' width='100%' height='100%' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cpattern id='a' patternUnits='userSpaceOnUse' width='20' height='20' patternTransform='scale(1)'%3E%3Crect x='0' y='0' width='100%' height='100%' fill='hsl(var(--background))'/%3E%3Crect width='10' height='10' x='0' y='0' fill='hsl(var(--secondary))' /%3E%3Crect width='10' height='10' x='10' y='10' fill='hsl(var(--secondary))' /%3E%3C/pattern%3E%3C/defs%3E%3Crect width='800%' height='800%' transform='translate(0,0)' fill='url(%23a)'/%3E%3C/svg%3E");
+  }
+}
+
+@layer components {
+  /* Custom style for unobtrusive Leaflet attribution */
+  .leaflet-control-attribution {
+    font-size: 11px;
+    opacity: 0.8;
+    background: rgba(255,252,246,0.65);
+    padding: 4px 6px;
+    border-radius: 6px;
+  }
+  .force-no-border {
+    border: 0 !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+}
+
+/* Fix for Leaflet map rendering over other elements */
+.leaflet-container {
+  z-index: 0;
+}
+
+/* Hide Next.js default loading bar */
+#nprogress {
+  display: none !important;
+}

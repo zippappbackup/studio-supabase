@@ -1,0 +1,16 @@
+# Settings to manage and configure a Firebase App Hosting backend.
+# https://firebase.google.com/docs/app-hosting/configure
+
+# Explicitly set the location to 'us-central1' to ensure consistent deployments.
+location: us-central1
+
+runConfig:
+  # Increase this value if you'd like to automatically spin up
+  # more instances in response to increased traffic.
+  maxInstances: 1
+  # Sets the number of concurrent requests an instance can receive.
+  concurrency: 80
+
+# Explicitly enable and configure a Storage bucket in this region.
+storage:
+  bucket: ${PROJECT_ID}.appspot.com

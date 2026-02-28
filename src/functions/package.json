@@ -1,0 +1,31 @@
+
+{
+  "name": "functions",
+  "private": true,
+  "scripts": {
+    "build": "npm run compile",
+    "compile": "rm -rf build && tsc",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "engines": {
+    "node": "20"
+  },
+  "main": "build/index.js",
+  "dependencies": {
+    "@googlemaps/google-maps-services-js": "^3.4.0",
+    "cors": "^2.8.5",
+    "firebase-admin": "^12.0.0",
+    "firebase-functions": "^5.0.1",
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/google.maps": "^3.58.1",
+    "@types/node-fetch": "^2.6.11",
+    "esbuild": "^0.23.0",
+    "typescript": "^5.0.0"
+  },
+  "description": "Zipp Super App Cloud Functions"
+}
+    
