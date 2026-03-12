@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useCallback } from "react";
@@ -8,15 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Upload, Download } from "lucide-react";
-import { useFirestore } from "@/firebase";
-import { collection, query, getDocs, orderBy, limit, startAfter, DocumentSnapshot } from 'firebase/firestore';
-import { getFunctions, httpsCallable } from "firebase/functions";
+import { supabase } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth";
 
 export function DataImporterClientPage() {
     const { toast } = useToast();
-    const db = useFirestore();
-
     const [file, setFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
@@ -39,7 +34,7 @@ export function DataImporterClientPage() {
         }
 
         setIsUploading(true);
-        toast({ title: "Upload Started", description: "Processing vendor file on the server. This may take a moment...", variant: "info" });
+        toast({ title: "Upload Started", description: "Processing vendor file. This may take a moment...", variant: "info" });
 
         const reader = new FileReader();
         reader.readAsText(file);
@@ -50,21 +45,74 @@ export function DataImporterClientPage() {
                     throw new Error("Could not read file content.");
                 }
                 
-                const functions = getFunctions();
-                const processVendorImport = httpsCallable(functions, 'processVendorImport');
+                // Parse the JSON content
+                const vendors = JSON.parse(content);
                 
-                const result: any = await processVendorImport({ fileContent: content });
-                const { success, createdCount, skippedCount, error } = result.data;
-                
-                if (success) {
-                    toast({
-                        title: "Import Complete",
-                        description: `Successfully created ${createdCount} new vendors. Skipped ${skippedCount} potential duplicates.`,
-                        variant: "success",
-                    });
-                } else {
-                    throw new Error(error || "An unknown server error occurred during import.");
+                if (!Array.isArray(vendors)) {
+                    throw new Error("Invalid JSON format. Expected an array of vendors.");
                 }
+
+                // Insert vendors in batches
+                const BATCH_SIZE = 50;
+                let createdCount = 0;
+                let skippedCount = 0;
+
+                for (let i = 0; i < vendors.length; i += BATCH_SIZE) {
+                    const batch = vendors.slice(i, i + BATCH_SIZE);
+                    
+                    // Transform vendor data to match database schema
+                    const transformedBatch = batch.map((vendor: any) => ({
+                        vendor_id: vendor.id || vendor.vendor_id,
+                        name: vendor.name,
+                        normalized_name: vendor.normalizedName || vendor.normalized_name,
+                        searchable_name: vendor.searchableName || vendor.searchable_name,
+                        category_id: vendor.categoryId || vendor.category_id,
+                        logo_url: vendor.logoUrl || vendor.logo_url,
+                        description: vendor.description,
+                        region: vendor.region,
+                        lat: vendor.lat,
+                        lng: vendor.lng,
+                        address: vendor.address,
+                        phone: vendor.phone,
+                        email: vendor.email,
+                        website: vendor.website,
+                        operating_hours: vendor.operatingHours || vendor.operating_hours,
+                        google_rating: vendor.googleRating || vendor.google_rating,
+                        google_review_count: vendor.googleReviewCount || vendor.google_review_count,
+                        zipp_rating: vendor.zippRating || vendor.zipp_rating,
+                        zipp_review_count: vendor.zippReviewCount || vendor.zipp_review_count,
+                        tags: vendor.tags,
+                        offerings: vendor.offerings,
+                        photos: vendor.photos,
+                        created_at: vendor.createdAt || vendor.created_at || new Date().toISOString(),
+                        updated_at: vendor.updatedAt || vendor.updated_at || new Date().toISOString(),
+                    }));
+
+                    // Insert batch with upsert to handle duplicates
+                    const { data, error } = await supabase
+                        .from('vendors')
+                        .upsert(transformedBatch, { 
+                            onConflict: 'vendor_id',
+                            ignoreDuplicates: false 
+                        });
+
+                    if (error) {
+                        // Check if error is due to duplicates
+                        if (error.code === '23505') { // Unique violation
+                            skippedCount += batch.length;
+                        } else {
+                            throw error;
+                        }
+                    } else {
+                        createdCount += batch.length;
+                    }
+                }
+                
+                toast({
+                    title: "Import Complete",
+                    description: `Successfully processed ${createdCount} vendors. Skipped ${skippedCount} potential duplicates.`,
+                    variant: "success",
+                });
             } catch (err: any) {
                 toast({
                     title: "Import Failed",
@@ -85,56 +133,53 @@ export function DataImporterClientPage() {
     };
     
     const handleLiveExport = async () => {
-        if (!db) {
-            toast({ title: "Database Error", description: "Firestore connection not available.", variant: "destructive" });
-            return;
-        }
-    
         setIsExporting(true);
         toast({ title: "Exporting Live Data", description: "Fetching all vendors from the database. This may take a moment...", variant: "info" });
     
-        const allVendors: any[] = [];
-        const BATCH_SIZE = 300;
-        let lastVisible: DocumentSnapshot | null = null;
-        let hasMore = true;
-    
         try {
-            while (hasMore) {
-                const vendorsCollectionRef = collection(db, "vendors");
-                let q;
-                
-                if (lastVisible) {
-                    q = query(vendorsCollectionRef, orderBy('__name__'), startAfter(lastVisible), limit(BATCH_SIZE));
-                } else {
-                    q = query(vendorsCollectionRef, orderBy('__name__'), limit(BATCH_SIZE));
-                }
-                
-                const querySnapshot = await getDocs(q);
+            // Fetch all vendors from Supabase
+            const { data: vendors, error } = await supabase
+                .from('vendors')
+                .select('*')
+                .order('name');
+
+            if (error) throw error;
     
-                if (querySnapshot.empty) {
-                    hasMore = false;
-                } else {
-                    querySnapshot.forEach((doc) => {
-                        const data = doc.data();
-                        allVendors.push({ id: doc.id, ...data });
-                    });
-                    lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
-                    hasMore = querySnapshot.docs.length === BATCH_SIZE;
-                }
-            }
-    
-            if (allVendors.length === 0) {
+            if (!vendors || vendors.length === 0) {
                 toast({ title: "Export Complete", description: "No vendors found in the database." });
                 setIsExporting(false);
                 return;
             }
     
-            const jsonString = JSON.stringify(allVendors, (key, value) => {
-                if (value && typeof value === 'object' && value.seconds !== undefined && value.nanoseconds !== undefined) {
-                    return new Date(value.seconds * 1000).toISOString();
-                }
-                return value;
-            }, 2);
+            // Transform back to original format with camelCase
+            const transformedVendors = vendors.map(v => ({
+                id: v.vendor_id,
+                name: v.name,
+                normalizedName: v.normalized_name,
+                searchableName: v.searchable_name,
+                categoryId: v.category_id,
+                logoUrl: v.logo_url,
+                description: v.description,
+                region: v.region,
+                lat: v.lat,
+                lng: v.lng,
+                address: v.address,
+                phone: v.phone,
+                email: v.email,
+                website: v.website,
+                operatingHours: v.operating_hours,
+                googleRating: v.google_rating,
+                googleReviewCount: v.google_review_count,
+                zippRating: v.zipp_rating,
+                zippReviewCount: v.zipp_review_count,
+                tags: v.tags,
+                offerings: v.offerings,
+                photos: v.photos,
+                createdAt: v.created_at,
+                updatedAt: v.updated_at,
+            }));
+
+            const jsonString = JSON.stringify(transformedVendors, null, 2);
 
             const blob = new Blob([jsonString], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
@@ -147,7 +192,7 @@ export function DataImporterClientPage() {
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
             
-            toast({ title: "Export Successful", description: `Exported ${allVendors.length} vendors.`, variant: "success" });
+            toast({ title: "Export Successful", description: `Exported ${vendors.length} vendors.`, variant: "success" });
     
         } catch (err: any) {
             toast({ title: "Export Failed", description: err.message, variant: "destructive" });
@@ -165,7 +210,7 @@ export function DataImporterClientPage() {
             <CardContent className="space-y-6">
                 <div className="space-y-3 p-4 border rounded-lg bg-background">
                     <Label className="font-semibold">Export Live Database</Label>
-                    <p className="text-sm text-muted-foreground">Download a complete JSON backup of all vendors currently in the live Firestore database.</p>
+                    <p className="text-sm text-muted-foreground">Download a complete JSON backup of all vendors currently in the Supabase database.</p>
                     <Button onClick={handleLiveExport} disabled={isExporting} className="w-full sm:w-auto">
                         {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                         Export All Live Vendor Data

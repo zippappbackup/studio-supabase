@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
-import { getFunctions, httpsCallable } from "firebase/functions";
+import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -35,19 +35,10 @@ export function ImageUploader({ onUploadComplete, storagePath, disabled = false,
       return;
     }
     
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => {
-        const base64File = reader.result as string;
-        uploadFile(base64File, file.name);
-    };
-    reader.onerror = (error) => {
-        console.error("FileReader error: ", error);
-        toast({ title: "File Read Error", description: "Could not read the selected file.", variant: "destructive" });
-    };
+    uploadFile(file);
   };
 
-  const uploadFile = async (base64File: string, fileName: string) => {
+  const uploadFile = async (file: File) => {
     if (!user) {
       toast({ title: "Authentication Error", description: "You must be logged in to upload files.", variant: "destructive" });
       return;
@@ -57,20 +48,31 @@ export function ImageUploader({ onUploadComplete, storagePath, disabled = false,
     toast({ title: "Uploading...", description: "Your image is being uploaded securely.", variant: "info" });
     
     try {
-        const functions = getFunctions();
-        const uploadImage = httpsCallable(functions, 'uploadImage');
-        
         // Sanitize filename and create a unique path
-        const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.\-_]/g, '');
-        const fullPath = `uploads/${user.uid}/${storagePath}/${new Date().getTime()}-${sanitizedFileName}`;
+        const fileExt = file.name.split('.').pop();
+        const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '');
+        const fileName = `${user.uid}/${storagePath}/${Date.now()}-${sanitizedFileName}`;
 
-        const result: any = await uploadImage({ file: base64File, path: fullPath });
+        // Upload to Supabase Storage
+        const { data, error } = await supabase.storage
+            .from('uploads')
+            .upload(fileName, file, {
+                cacheControl: '3600',
+                upsert: false
+            });
         
-        if (result.data.success && result.data.url) {
-            onUploadComplete(result.data.url);
+        if (error) throw error;
+
+        // Get public URL
+        const { data: urlData } = supabase.storage
+            .from('uploads')
+            .getPublicUrl(fileName);
+        
+        if (urlData.publicUrl) {
+            onUploadComplete(urlData.publicUrl);
             toast({ title: "Upload Successful", description: "Image has been added.", variant: "success" });
         } else {
-            throw new Error(result.data.error || "Upload failed for an unknown reason.");
+            throw new Error("Failed to get public URL for uploaded image.");
         }
 
     } catch (error: any) {

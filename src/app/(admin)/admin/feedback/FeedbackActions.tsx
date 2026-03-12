@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -10,8 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MoreVertical, Loader2 } from 'lucide-react';
-import { useFirestore } from '@/firebase';
-import { doc, deleteDoc } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Feedback } from '@/lib/types';
 import {
@@ -31,7 +29,6 @@ interface FeedbackActionsProps {
 }
 
 export function FeedbackActions({ feedback, onViewSummary }: FeedbackActionsProps) {
-  const db = useFirestore();
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -41,16 +38,20 @@ export function FeedbackActions({ feedback, onViewSummary }: FeedbackActionsProp
   };
 
   const confirmDelete = async () => {
-    if (!db) return;
     setIsDeleting(true);
     setIsConfirmOpen(false);
 
     try {
-      const docRef = doc(db, 'feedback', feedback.id);
-      await deleteDoc(docRef);
+      const { error } = await supabase
+        .from('feedback')
+        .delete()
+        .eq('id', feedback.id);
+      
+      if (error) throw error;
+      
       toast({ title: 'Feedback Deleted', description: 'The message has been removed.', variant: 'success' });
     } catch (error: any) {
-      toast({ title: 'Error', description: `Failed to delete feedback: ${error.message}`, variant: 'destructive' });
+      toast({ title: 'Error', description: error.message || 'Failed to delete feedback.', variant: 'destructive' });
     } finally {
       setIsDeleting(false);
     }

@@ -1,5 +1,9 @@
-
 'use client';
+
+// ============================================================================
+// AUTH CONTEXT & HOOK - Updated for Supabase
+// Replaces: src/lib/auth.tsx (Firebase version)
+// ============================================================================
 
 import {
   createContext,
@@ -8,49 +12,12 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import {
-  onAuthStateChanged,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  updateProfile,
-  sendEmailVerification,
-  signInWithPhoneNumber,
-  RecaptchaVerifier,
-  ConfirmationResult,
-  linkWithCredential,
-  EmailAuthProvider,
-  signInAnonymously,
-  type User as FirebaseUser,
-  type UserCredential,
-  type Auth,
-  fetchSignInMethodsForEmail,
-  updatePassword,
-  sendPasswordResetEmail,
-  sendSignInLinkToEmail,
-  isSignInWithEmailLink,
-  signInWithEmailLink,
-  applyActionCode,
-  checkActionCode,
-  type ActionCodeSettings,
-  updateEmail,
-  reauthenticateWithCredential,
-} from 'firebase/auth';
-import {
-  doc,
-  getDoc,
-  setDoc,
-  serverTimestamp,
-  updateDoc,
-  writeBatch,
-  onSnapshot,
-} from 'firebase/firestore';
-import { useAuth as useFirebaseAuth, useFirestore, initializeFirebase } from '@/firebase';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { supabase } from '@/lib/supabase/client';
+import { getSupabaseServerClient } from '@/lib/supabase/server';
+import type { User } from '@supabase/supabase-js';
 import type { Address, ZippUser, Vendor } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { logActivity } from '@/lib/activity-logger';
-import { withTimeout } from '@/lib/withTimeout';
 
 interface AuthContextType {
   user: ZippUser | null;
@@ -75,7 +42,6 @@ interface AuthContextType {
   sendResetEmail: (email: string) => Promise<{ success: boolean, error?: any }>;
   changePassword: (currentPass: string, newPass: string) => Promise<{ success: boolean, error?: any }>;
   requestManualVerification: (vendor: Vendor) => Promise<void>;
-  getFirebaseAuth: () => Auth;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -83,63 +49,73 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<ZippUser | null>(null);
   const [loading, setLoading] = useState(true);
-  
-  const auth = useFirebaseAuth();
-  const db = useFirestore();
   const router = useRouter();
 
   useEffect(() => {
-    let unsubscribeProfile: () => void = () => {};
-
-    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
-      unsubscribeProfile(); // Unsubscribe from any previous profile listener
-
-      if (firebaseUser) {
-        setLoading(true);
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
-        
-        // This is the critical change. We now force a server read on auth change.
-        // Then we set up the real-time listener.
-        getDoc(userDocRef).then(docSnap => {
-            if (docSnap.exists()) {
-                 const userData = { uid: firebaseUser.uid, ...docSnap.data() } as ZippUser;
-                 setUser(userData);
-            } else {
-                 setUser(null);
-            }
-            setLoading(false); // Loading is complete after the initial server read.
-
-            // Now, set up the real-time listener for subsequent updates.
-            unsubscribeProfile = onSnapshot(userDocRef, (snap) => {
-                if (snap.exists()) {
-                    setUser({ uid: firebaseUser.uid, ...snap.data() } as ZippUser);
-                } else {
-                    setUser(null);
-                }
-            });
-        }).catch(error => {
-            console.error("Error fetching user profile after auth change:", error);
-            setUser(null);
-            setLoading(false);
-        });
-
+    // Get initial session
+    const initAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        await fetchUserProfile(session.user.id);
       } else {
-        // No Firebase user found, so no profile to fetch. Loading is complete.
+        setLoading(false);
+      }
+    };
+
+    initAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        await fetchUserProfile(session.user.id);
+      } else {
         setUser(null);
         setLoading(false);
       }
     });
 
-    return () => {
-      unsubscribeAuth();
-      unsubscribeProfile();
-    };
-  }, [auth, db]);
+    return () => subscription.unsubscribe();
+  }, []);
 
+  const fetchUserProfile = async (uid: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('uid', uid)
+        .single();
+
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        setUser(null);
+      } else if (data) {
+        setUser(data as ZippUser);
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const login = async (email: string, pass: string) => {
-    await signInWithEmailAndPassword(auth, email, pass);
-    router.push('/'); 
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password: pass,
+    });
+
+    if (error) throw error;
+    
+    // Log activity
+    try {
+      await logActivity('login', {});
+    } catch (logError) {
+      console.error('Failed to log activity:', logError);
+    }
+
+    router.push('/');
   };
 
   const signup = async (
@@ -158,97 +134,156 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   ): Promise<{ redirectPath: string }> => {
     const { claimedVendorId } = data;
-    
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-      const firebaseUser = userCredential.user;
 
-      await updateProfile(firebaseUser, { displayName: data.name });
-      
-      const userDocRef = doc(db, 'users', firebaseUser.uid);
+    try {
+      // Create auth user
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password: pass,
+        options: {
+          data: {
+            name: data.name,
+          },
+        },
+      });
+
+      if (signUpError) throw signUpError;
+      if (!authData.user) throw new Error('No user returned from signup');
+
+      const userId = authData.user.id;
       let redirectPath = '/signup-success';
 
+      // CASE 1: Claiming an existing vendor
       if (claimedVendorId) {
-          const userDocData: Partial<ZippUser> = {
-              name: data.name,
-              email, phone: data.phone, role: 'vendor',
-              address: data.address, region: data.address.country,
-              updatedAt: serverTimestamp(),
-              createdAt: serverTimestamp(),
-              vendorId: claimedVendorId,
-              dob: null, gender: null, profession: null,
-          };
-          await setDoc(userDocRef, userDocData, { merge: true });
+        const userDocData = {
+          uid: userId,
+          name: data.name,
+          email,
+          phone: data.phone,
+          role: 'vendor',
+          address_line1: data.address.line1,
+          address_line2: data.address.line2,
+          address_postal_code: data.address.postalCode,
+          address_country: data.address.country,
+          region: data.address.country,
+          vendor_id: claimedVendorId,
+          dob: null,
+          gender: null,
+          profession: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
 
-          const vendorDocRef = doc(db, 'vendors', claimedVendorId);
-          await updateDoc(vendorDocRef, {
-              subscriptionStatus: 'claimed_pending_approval',
-              claimedBy: firebaseUser.uid,
-              updatedAt: serverTimestamp(),
-          });
-          
-          redirectPath = '/claim-success';
+        const { error: userError } = await supabase
+          .from('users')
+          .insert(userDocData);
 
+        if (userError) throw userError;
+
+        // Update vendor with claimed status
+        const { error: vendorError } = await supabase
+          .from('vendors')
+          .update({
+            subscription_status: 'claimed_pending_approval',
+            claimed_by: userId,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('vendor_id', claimedVendorId);
+
+        if (vendorError) throw vendorError;
+
+        redirectPath = '/claim-success';
+
+      // CASE 2: Creating a new vendor account (no existing business)
       } else if (data.role === 'vendor') {
-          const newUserDoc: Partial<ZippUser> & { address: { country: string } } = {
-            name: data.name,
-            email: firebaseUser.email,
-            phone: data.phone,
-            role: 'vendor',
-            region: data.address.country,
-            address: { ...data.address, country: data.address.country },
-            dob: null, gender: null, profession: null,
-            vendorId: firebaseUser.uid, 
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          };
-          
-          const vendorDocRef = doc(db, 'vendors', firebaseUser.uid);
-          const newVendorDoc = {
-              name: data.companyName,
-              normalizedName: data.companyName?.toLowerCase(),
-              email: firebaseUser.email,
-              phone: data.phone,
-              address: data.address.line1,
-              categoryId: '',
-              subscriptionStatus: 'claimed_pending_approval',
-              claimedBy: firebaseUser.uid,
-              modulesEnabled: ['reviews', 'offerings', 'promotions'],
-              createdAt: serverTimestamp(),
-              updatedAt: serverTimestamp(),
-              region: data.address.country,
-              googleRating: 0, googleReviewCount: 0,
-              zippRating: 0, zippReviewCount: 0,
-              tags: [], offerings: [], reviews: [], promotions: [],
-          };
-          
-          await setDoc(userDocRef, newUserDoc, { merge: true });
-          await setDoc(vendorDocRef, newVendorDoc);
-          redirectPath = '/claim-success';
+        const userDocData = {
+          uid: userId,
+          name: data.name,
+          email,
+          phone: data.phone,
+          role: 'vendor',
+          region: data.address.country,
+          address_line1: data.address.line1,
+          address_line2: data.address.line2,
+          address_postal_code: data.address.postalCode,
+          address_country: data.address.country,
+          dob: null,
+          gender: null,
+          profession: null,
+          vendor_id: userId,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
 
-      } else { 
-          const newUserDoc: Partial<ZippUser> = {
-            name: data.name,
-            email: firebaseUser.email,
-            phone: data.phone,
-            role: 'user',
-            region: data.address.country,
-            address: data.address,
-            dob: data.dob,
-            gender: data.gender,
-            profession: data.profession,
-            favourites: [],
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          };
-          await setDoc(userDocRef, newUserDoc, { merge: true });
-          redirectPath = '/signup-success';
+        const { error: userError } = await supabase
+          .from('users')
+          .insert(userDocData);
+
+        if (userError) throw userError;
+
+        // Create new vendor record
+        const vendorDocData = {
+          vendor_id: userId,
+          name: data.companyName || data.name,
+          normalized_name: (data.companyName || data.name)?.toLowerCase(),
+          email,
+          phone: data.phone,
+          address: data.address.line1,
+          category_id: '',
+          subscription_status: 'claimed_pending_approval',
+          claimed_by: userId,
+          modules_enabled: ['reviews', 'offerings', 'promotions'],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          region: data.address.country,
+          google_rating: 0,
+          google_review_count: 0,
+          zipp_rating: 0,
+          zipp_review_count: 0,
+          tags: [],
+        };
+
+        const { error: vendorError } = await supabase
+          .from('vendors')
+          .insert(vendorDocData);
+
+        if (vendorError) throw vendorError;
+
+        redirectPath = '/claim-success';
+
+      // CASE 3: Regular user signup
+      } else {
+        const userDocData = {
+          uid: userId,
+          name: data.name,
+          email,
+          phone: data.phone,
+          role: 'user',
+          region: data.address.country,
+          address_line1: data.address.line1,
+          address_line2: data.address.line2,
+          address_postal_code: data.address.postalCode,
+          address_country: data.address.country,
+          dob: data.dob,
+          gender: data.gender,
+          profession: data.profession,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        const { error: userError } = await supabase
+          .from('users')
+          .insert(userDocData);
+
+        if (userError) throw userError;
+
+        redirectPath = '/signup-success';
       }
 
       return { redirectPath };
 
     } catch (error: any) {
-      if (error.code === 'auth/email-already-in-use') {
+      if (error.message?.includes('already registered')) {
         throw new Error('This email is already associated with another account. Please log in or use a different email.');
       }
       throw error;
@@ -256,73 +291,104 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    await signOut(auth);
+    await supabase.auth.signOut();
     router.push('/login');
   };
 
   const sendResetEmail = async (email: string) => {
     try {
-      await sendPasswordResetEmail(auth, email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      });
+
+      if (error) throw error;
       return { success: true };
     } catch (error: any) {
       let message = "An unknown error occurred.";
-      if (error.code === 'auth/user-not-found') {
+      if (error.message?.includes('User not found')) {
         message = "No account found with this email address.";
       }
       return { success: false, error: message };
     }
   };
-  
-  const changePassword = async (currentPass: string, newPass: string) => {
-    const firebaseUser = auth.currentUser;
-    if (!firebaseUser || !firebaseUser.email) {
-      return { success: false, error: "No authenticated user found." };
-    }
 
+  const changePassword = async (currentPass: string, newPass: string) => {
     try {
-      const credential = EmailAuthProvider.credential(firebaseUser.email, currentPass);
-      await reauthenticateWithCredential(firebaseUser, credential);
-      await updatePassword(firebaseUser, newPass);
+      // First verify current password by attempting to sign in
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
       
+      if (!currentUser?.email) {
+        return { success: false, error: "No authenticated user found." };
+      }
+
+      // Verify current password
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: currentUser.email,
+        password: currentPass,
+      });
+
+      if (signInError) {
+        return { success: false, error: "The current password you entered is incorrect." };
+      }
+
+      // Update to new password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPass,
+      });
+
+      if (updateError) throw updateError;
+
       return { success: true };
     } catch (error: any) {
-      let message = "An unknown error occurred.";
-      if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-        message = "The current password you entered is incorrect.";
-      } else if (error.code === 'auth/weak-password') {
-        message = "The new password is too weak. It must be at least 6 characters.";
-      }
-      return { success: false, error: message };
+      return { success: false, error: error.message || "An unknown error occurred." };
     }
   };
 
-  const requestManualVerification = async (vendor: Vendor): Promise<void> => {
-      await updateDoc(doc(db, 'vendors', vendor.id), {
-        subscriptionStatus: 'claimed_pending_approval',
-      });
+  const requestManualVerification = async (vendor: Vendor) => {
+    try {
+      // Create a verification request record
+      const { error } = await supabase
+        .from('vendor_verification_requests')
+        .insert({
+          vendor_id: vendor.id,
+          requested_by: user?.uid,
+          status: 'pending',
+          created_at: new Date().toISOString(),
+        });
+
+      if (error) throw error;
+
+      // You might want to also send an email notification to admins here
+      // This would be done via a Supabase Edge Function
+
+    } catch (error: any) {
+      console.error('Error requesting verification:', error);
+      throw new Error('Failed to submit verification request. Please try again.');
+    }
   };
 
-  const getFirebaseAuth = () => auth;
-
-  const value: AuthContextType = {
-    user,
-    loading,
-    login,
-    signup,
-    logout,
-    sendResetEmail,
-    changePassword,
-    requestManualVerification,
-    getFirebaseAuth,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        signup,
+        logout,
+        sendResetEmail,
+        changePassword,
+        requestManualVerification,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAuth must be used within AuthProvider');
   }
   return context;
 }

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -15,8 +14,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { useSupabaseDoc } from '@/lib/supabase/hooks';
+import { supabase } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, X, ArrowLeft, ArrowRight } from 'lucide-react';
 import type { Vendor, Category } from "@/lib/types";
@@ -45,12 +44,7 @@ interface VendorEditDialogProps {
 
 const getSafeDate = (dateInput: any): string => {
     if (!dateInput) return 'N/A';
-    let date;
-    if (dateInput.toDate) { // Firestore Timestamp
-        date = dateInput.toDate();
-    } else {
-        date = new Date(dateInput);
-    }
+    const date = new Date(dateInput);
     if (isNaN(date.getTime())) {
         return 'Invalid Date';
     }
@@ -58,11 +52,13 @@ const getSafeDate = (dateInput: any): string => {
 };
 
 export function VendorEditDialog({ isOpen, setIsOpen, vendorId }: VendorEditDialogProps) {
-  const db = useFirestore();
   const { toast } = useToast();
   
-  const vendorRef = useMemoFirebase(() => (vendorId && db ? doc(db, 'vendors', vendorId) : null), [vendorId, db]);
-  const { data: liveVendor, isLoading: isVendorLoading } = useDoc<Vendor>(vendorRef);
+  const vendorQuery = useMemo(
+    () => vendorId ? () => supabase.from('vendors').select('*').eq('vendor_id', vendorId).single() : () => null,
+    [vendorId]
+  );
+  const { data: liveVendor, isLoading: isVendorLoading } = useSupabaseDoc<Vendor>(vendorQuery);
 
   const [formData, setFormData] = useState<Partial<Vendor>>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -154,17 +150,23 @@ export function VendorEditDialog({ isOpen, setIsOpen, vendorId }: VendorEditDial
   const handleSave = async () => {
     if (!vendorId) return;
     setIsSaving(true);
-    const docRef = doc(db, "vendors", vendorId);
 
     try {
       const dataToUpdate = {
         ...formData,
-        searchableName: formData.name?.toLowerCase(),
-        normalizedName: formData.name?.toLowerCase().replace(/[^a-z0-9\\s]/g, ' ').replace(/\\s+/g, ' ').trim(),
-        searchableTags: formData.tags?.map(t => t.toLowerCase()),
-        updatedAt: serverTimestamp(),
+        searchable_name: formData.name?.toLowerCase(),
+        normalized_name: formData.name?.toLowerCase().replace(/[^a-z0-9\\s]/g, ' ').replace(/\\s+/g, ' ').trim(),
+        searchable_tags: formData.tags?.map(t => t.toLowerCase()),
+        updated_at: new Date().toISOString(),
       };
-      await updateDoc(docRef, dataToUpdate as any);
+      
+      const { error } = await supabase
+        .from('vendors')
+        .update(dataToUpdate)
+        .eq('vendor_id', vendorId);
+      
+      if (error) throw error;
+      
       toast({ title: "Vendor Updated", description: `${formData.name} has been successfully updated.`, variant: "success" });
       setIsOpen(false);
     } catch (error: any) {

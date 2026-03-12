@@ -1,10 +1,9 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/lib/auth";
-import { useFirestore } from "@/firebase";
-import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { useSupabaseDoc } from '@/lib/supabase/hooks';
+import { supabase } from '@/lib/supabase/client';
 import type { Vendor, GooglePhoto, Category } from "@/lib/types";
 import { useRouter } from "next/navigation";
 
@@ -26,7 +25,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { PlaceholderImages } from "@/lib/placeholder-images";
-import { useDoc, useMemoFirebase } from "@/firebase";
 import { getLogoUrl } from "@/lib/utils";
 import { useAppCache } from "@/context/AppCacheProvider";
 import {
@@ -44,7 +42,6 @@ interface VendorProfileFormProps {
 
 export function VendorProfileForm({ onPublicViewClick }: VendorProfileFormProps) {
     const { user } = useAuth();
-    const db = useFirestore();
     const { toast } = useToast();
     const router = useRouter();
     const { categories } = useAppCache();
@@ -61,8 +58,11 @@ export function VendorProfileForm({ onPublicViewClick }: VendorProfileFormProps)
 
     const vendorId = useMemo(() => user?.vendorId || user?.uid, [user]);
 
-    const vendorRef = useMemoFirebase(() => (vendorId && db ? doc(db, "vendors", vendorId) : null), [vendorId, db]);
-    const { data: liveVendor, isLoading: isLiveVendorLoading } = useDoc<Vendor>(vendorRef);
+    const vendorQuery = useMemo(
+        () => vendorId ? () => supabase.from('vendors').select('*').eq('vendor_id', vendorId).single() : () => null,
+        [vendorId]
+    );
+    const { data: liveVendor, isLoading: isLiveVendorLoading } = useSupabaseDoc<Vendor>(vendorQuery);
     
     const countryOptions: ComboboxOption[] = useMemo(() => countries.map(c => ({ value: c.value, label: c.label })), []);
 
@@ -178,24 +178,28 @@ export function VendorProfileForm({ onPublicViewClick }: VendorProfileFormProps)
 
 
     const handleSave = async () => {
-        if (!vendorId || !db) {
-            toast({ title: "Error", description: "Not logged in or database not connected.", variant: "destructive" });
+        if (!vendorId) {
+            toast({ title: "Error", description: "Not logged in.", variant: "destructive" });
             return;
         }
 
         setIsSaving(true);
-        const vendorRef = doc(db, "vendors", vendorId);
         try {
             const operatingHoursArray = hoursText.split('\n').filter(line => line.trim() !== '');
 
             const dataToUpdate = {
                 ...vendor,
-                operatingHours: operatingHoursArray,
-                searchableTags: vendor.types?.map(t => t.toLowerCase()) ?? [],
-                updatedAt: serverTimestamp(),
+                operating_hours: operatingHoursArray,
+                searchable_tags: vendor.types?.map(t => t.toLowerCase()) ?? [],
+                updated_at: new Date().toISOString(),
             };
 
-            await updateDoc(vendorRef, dataToUpdate as { [x: string]: any; });
+            const { error } = await supabase
+                .from('vendors')
+                .update(dataToUpdate)
+                .eq('vendor_id', vendorId);
+            
+            if (error) throw error;
             
             const updatedVendorState = { ...initialVendor, ...vendor, operatingHours: operatingHoursArray };
             setInitialVendor(updatedVendorState);
@@ -203,7 +207,7 @@ export function VendorProfileForm({ onPublicViewClick }: VendorProfileFormProps)
 
 
             if (user) {
-                logActivity(db, user.uid, 'vendor_profile_update', { fieldsUpdated: Object.keys(dataToUpdate) });
+                await logActivity(supabase, user.uid, 'vendor_profile_update', { fieldsUpdated: Object.keys(dataToUpdate) });
             }
 
             toast({ title: "Profile Saved", description: "Your business information has been updated." });
@@ -260,7 +264,7 @@ export function VendorProfileForm({ onPublicViewClick }: VendorProfileFormProps)
     const isChanged = JSON.stringify(vendor) !== JSON.stringify(initialVendor);
     
     const uploadedPhotoCount = useMemo(() => {
-        return vendor.photos?.filter(url => typeof url === 'string' && url.includes("firebasestorage.googleapis.com")).length || 0;
+        return vendor.photos?.filter(url => typeof url === 'string' && url.includes("supabase")).length || 0;
     }, [vendor.photos]);
 
     const isUploadLimitReached = uploadedPhotoCount >= 3;

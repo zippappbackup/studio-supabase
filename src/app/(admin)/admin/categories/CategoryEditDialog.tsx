@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -25,8 +24,7 @@ import {
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useFirestore } from "@/firebase";
-import { collection, doc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
+import { supabase } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2, PlusCircle, Loader2 } from "lucide-react";
 import type { Category, FieldSchema } from "@/lib/types";
@@ -67,7 +65,6 @@ export function CategoryEditDialog({
   category,
   logMessage,
 }: CategoryEditDialogProps) {
-  const db = useFirestore();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -118,36 +115,54 @@ export function CategoryEditDialog({
   }, [category, reset, isOpen, logMessage]);
 
   const onSubmit = async (data: CategoryFormData) => {
-    if (!db) return;
     setIsLoading(true);
     const action = category ? 'Updating' : 'Creating';
     logMessage(`${action} category: "${data.name}"`);
 
     try {
       if (category) {
+        // UPDATE existing category
         const finalData = {
-          ...data,
-          iconUrl: data.iconUrl || "", // Ensure iconUrl is not undefined
-          modulesAvailable: MODULES_MASTER_LIST,
-          updatedAt: serverTimestamp(),
+          name: data.name,
+          description: data.description || "",
+          icon_url: data.iconUrl || "",
+          default_modules: data.defaultModules || [],
+          fields_schema: data.fieldsSchema || [],
+          modules_available: MODULES_MASTER_LIST,
+          updated_at: new Date().toISOString(),
         };
-        const categoryRef = doc(db, "categories", category.id);
-        await updateDoc(categoryRef, finalData);
+        
+        const { error } = await supabase
+          .from('categories')
+          .update(finalData)
+          .eq('id', category.id);
+        
+        if (error) throw error;
+        
         const successMsg = `Category "${data.name}" has been updated.`;
         toast({ title: "Category Updated", description: successMsg, variant: "success" });
         logMessage(`Success: ${successMsg}`);
       } else {
-         const finalData = {
-          ...data,
-          iconUrl: data.iconUrl || "",
-          modulesAvailable: MODULES_MASTER_LIST,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        };
-        const collectionRef = collection(db, "categories");
+        // CREATE new category
         const docId = data.name.toLowerCase().replace(/\s+/g, '-');
-        const docWithId = doc(collectionRef, docId);
-        await setDoc(docWithId, finalData, {merge: false});
+        const finalData = {
+          id: docId,
+          name: data.name,
+          description: data.description || "",
+          icon_url: data.iconUrl || "",
+          default_modules: data.defaultModules || [],
+          fields_schema: data.fieldsSchema || [],
+          modules_available: MODULES_MASTER_LIST,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        
+        const { error } = await supabase
+          .from('categories')
+          .insert(finalData);
+        
+        if (error) throw error;
+        
         const successMsg = `A new category "${data.name}" has been created with ID: ${docId}.`;
         toast({ title: "Category Created", description: successMsg, variant: "success" });
         logMessage(`Success: ${successMsg}`);

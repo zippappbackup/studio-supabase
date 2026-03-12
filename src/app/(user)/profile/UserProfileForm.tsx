@@ -1,10 +1,8 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/lib/auth";
-import { useFirestore } from "@/firebase";
-import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { supabase } from "@/lib/supabase/client";
 import type { ZippUser } from "@/lib/types";
 
 import { Button } from "@/components/ui/button";
@@ -31,7 +29,6 @@ interface UserProfileFormProps {
 
 export default function UserProfileForm({ onOpenPasswordDialog }: UserProfileFormProps) {
     const { user: authUser } = useAuth();
-    const db = useFirestore();
     const router = useRouter();
     const { toast } = useToast();
 
@@ -51,12 +48,21 @@ export default function UserProfileForm({ onOpenPasswordDialog }: UserProfileFor
 
     useEffect(() => {
         const fetchUserData = async () => {
-            if (authUser?.uid && db) {
-                const userRef = doc(db, "users", authUser.uid);
-                const userSnap = await getDoc(userRef);
+            if (authUser?.uid) {
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('uid', authUser.uid)
+                    .single();
                 
-                if (userSnap.exists()) {
-                    const userData = { uid: userSnap.id, ...userSnap.data() } as ZippUser;
+                if (error) {
+                    console.error("Error fetching user:", error);
+                    setIsLoading(false);
+                    return;
+                }
+                
+                if (data) {
+                    const userData = { uid: data.uid, ...data } as ZippUser;
                     setUser(userData);
                     setInitialUser(userData);
                     if (userData.dob) {
@@ -82,7 +88,7 @@ export default function UserProfileForm({ onOpenPasswordDialog }: UserProfileFor
         if (authUser) {
             fetchUserData();
         }
-    }, [authUser, db]);
+    }, [authUser]);
 
     useEffect(() => {
         const hasChanged = 
@@ -126,13 +132,12 @@ export default function UserProfileForm({ onOpenPasswordDialog }: UserProfileFor
     };
 
     const handleSave = async () => {
-        if (!authUser?.uid || !db) {
-            toast({ title: "Error", description: "Not logged in or database not connected.", variant: "destructive" });
+        if (!authUser?.uid) {
+            toast({ title: "Error", description: "Not logged in.", variant: "destructive" });
             return;
         }
 
         setIsSaving(true);
-        const userRef = doc(db, "users", authUser.uid);
         
         let dobString: string | undefined = undefined;
         if (year && month && day) {
@@ -148,18 +153,23 @@ export default function UserProfileForm({ onOpenPasswordDialog }: UserProfileFor
         }
         
         try {
-            const dataToUpdate: Partial<ZippUser> & { updatedAt: any } = {
+            const dataToUpdate = {
                 name: user.name,
                 phone: user.phone,
                 profession: user.profession,
                 address: user.address,
                 region: user.region,
                 dob: dobString,
-                gender: gender ?? null, // Ensure undefined is not sent
-                updatedAt: serverTimestamp(),
-            }
+                gender: gender ?? null,
+                updated_at: new Date().toISOString(),
+            };
 
-            await updateDoc(userRef, dataToUpdate);
+            const { error } = await supabase
+                .from('users')
+                .update(dataToUpdate)
+                .eq('uid', authUser.uid);
+            
+            if (error) throw error;
             
             const updatedUser = { ...user, dob: dobString, gender };
             setInitialUser(updatedUser);
@@ -167,7 +177,7 @@ export default function UserProfileForm({ onOpenPasswordDialog }: UserProfileFor
             setInitialGender(gender);
             setIsChanged(false);
 
-            logActivity(db, authUser.uid, 'vendor_profile_update', { fieldsUpdated: Object.keys(dataToUpdate) });
+            await logActivity(supabase, authUser.uid, 'vendor_profile_update', { fieldsUpdated: Object.keys(dataToUpdate) });
 
             toast({ title: "Profile Saved", description: "Your information has been updated.", variant: "success" });
         } catch (error) {

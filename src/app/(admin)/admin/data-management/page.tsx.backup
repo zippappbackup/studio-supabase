@@ -1,0 +1,202 @@
+'use client';
+
+import { useState, useMemo, useEffect } from 'react';
+import { useSupabaseCollection } from '@/lib/supabase/hooks';
+import { supabase } from '@/lib/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Search, Loader2 } from 'lucide-react';
+import type { Vendor } from '@/lib/types';
+import Fuse from 'fuse.js';
+import { VendorEditDialog } from './VendorEditDialog';
+import { VendorActions } from './VendorActions';
+import { Button } from '@/components/ui/button';
+import { DataImporterClientPage } from './DataImporterClientPage';
+import { VendorSummaryDialog } from './VendorSummaryDialog';
+
+const VENDORS_PER_PAGE = 15;
+
+export default function DataManagementPage() {
+  const vendorsQuery = useMemo(
+    () => () => supabase.from('vendors').select('*').order('name'),
+    []
+  );
+  const { data: liveVendorsData, isLoading: isVendorDataLoading } = useSupabaseCollection<Vendor>(vendorsQuery);
+
+  // Transform vendor data to match expected format (vendor_id -> id)
+  const liveVendors = useMemo(() => {
+    return liveVendorsData?.map(v => ({ ...v, id: v.vendor_id || v.id })) || [];
+  }, [liveVendorsData]);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedVendorId, setSelectedVendorId] = useState<string | undefined>(undefined);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const fuse = useMemo(() => {
+    if (!liveVendors) return null;
+    return new Fuse(liveVendors, {
+      keys: ['id', 'name', 'address', 'phone', 'email', 'category_id'],
+      threshold: 0.3,
+      minMatchCharLength: 2,
+    });
+  }, [liveVendors]);
+
+  const filteredVendors = useMemo(() => {
+    if (!liveVendors) return [];
+    if (!searchQuery.trim()) return liveVendors;
+    if (!fuse) return liveVendors;
+    const searchResults = fuse.search(searchQuery);
+    return searchResults.map(result => result.item);
+  }, [liveVendors, searchQuery, fuse]);
+  
+  const totalPages = Math.ceil(filteredVendors.length / VENDORS_PER_PAGE);
+  const paginatedVendors = useMemo(() => {
+      const startIndex = (currentPage - 1) * VENDORS_PER_PAGE;
+      const endIndex = startIndex + VENDORS_PER_PAGE;
+      return filteredVendors.slice(startIndex, endIndex);
+  }, [filteredVendors, currentPage]);
+  
+  useEffect(() => {
+      if (currentPage > totalPages && totalPages > 0) {
+          setCurrentPage(1);
+      }
+  }, [currentPage, totalPages]);
+
+  const handleEdit = (vendor: Vendor) => {
+    setSelectedVendorId(vendor.id);
+    setIsEditDialogOpen(true);
+  };
+  
+  const handleViewSummary = (vendor: Vendor) => {
+    setSelectedVendorId(vendor.id);
+    setIsSummaryDialogOpen(true);
+  };
+
+  const handlePageChange = (newPage: number) => {
+      if (newPage >= 1 && newPage <= totalPages) {
+          setCurrentPage(newPage);
+      }
+  };
+
+  return (
+    <div className="flex flex-col gap-8">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Data Management</h1>
+          <p className="text-muted-foreground">
+            Manage vendor data, import new vendors, and export database backups.
+          </p>
+        </div>
+      </div>
+
+      {/* Data Importer Section */}
+      <DataImporterClientPage />
+
+      {/* Live Vendor Browser */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Live Vendor Database</CardTitle>
+          <CardDescription>
+            Browse all vendors currently in the database ({liveVendors.length} total). Use search to filter by name, address, phone, or email.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search vendors..."
+              className="pl-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          {isVendorDataLoading ? (
+            <div className="flex items-center justify-center h-48">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Address</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedVendors.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">
+                      {searchQuery ? 'No vendors found matching your search.' : 'No vendors in database.'}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedVendors.map((vendor) => (
+                    <TableRow key={vendor.id}>
+                      <TableCell className="font-medium">{vendor.name}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{vendor.address || 'N/A'}</TableCell>
+                      <TableCell className="text-sm">{vendor.phone || 'N/A'}</TableCell>
+                      <TableCell className="text-right">
+                        <VendorActions
+                          vendor={vendor}
+                          onEdit={() => handleEdit(vendor)}
+                          onView={() => handleViewSummary(vendor)}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-4">
+              <p className="text-sm text-muted-foreground">
+                Showing {((currentPage - 1) * VENDORS_PER_PAGE) + 1} to {Math.min(currentPage * VENDORS_PER_PAGE, filteredVendors.length)} of {filteredVendors.length} vendors
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Edit Dialog */}
+      <VendorEditDialog
+        vendorId={selectedVendorId}
+        isOpen={isEditDialogOpen}
+        setIsOpen={setIsEditDialogOpen}
+      />
+
+      {/* Summary Dialog */}
+      <VendorSummaryDialog
+        vendorId={selectedVendorId}
+        isOpen={isSummaryDialogOpen}
+        setIsOpen={setIsSummaryDialogOpen}
+      />
+    </div>
+  );
+}

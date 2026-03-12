@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
@@ -22,8 +21,7 @@ import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { countries, countryCodeMap } from "@/lib/countries";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useFirestore } from "@/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { supabase } from "@/lib/supabase/client";
 import type { Vendor } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from "next/image";
@@ -262,7 +260,6 @@ const PrivacyPolicyDialog = ({ isOpen, onOpenChange, onAgree }: { isOpen: boolea
 export function AuthForm({ type, vendorToClaim: vendorProp }: { type: "login" | "signup", vendorToClaim?: Vendor }) {
   const { user: authUser, loading: authLoading, login, signup, sendResetEmail } = useAuth();
   const { toast } = useToast();
-  const db = useFirestore();
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -310,23 +307,27 @@ export function AuthForm({ type, vendorToClaim: vendorProp }: { type: "login" | 
 
   useEffect(() => {
     const claimedVendorId = searchParams.get('claimedVendorId');
-    if (claimedVendorId && db && !vendorToClaim) {
+    if (claimedVendorId && !vendorToClaim) {
         const fetchVendor = async () => {
-            const vendorRef = doc(db, "vendors", claimedVendorId);
-            const vendorSnap = await getDoc(vendorRef);
-            if (vendorSnap.exists()) {
-                setVendorToClaim({ id: vendorSnap.id, ...vendorSnap.data() } as Vendor);
+            const { data, error } = await supabase
+                .from('vendors')
+                .select('*')
+                .eq('vendor_id', claimedVendorId)
+                .single();
+            
+            if (data && !error) {
+                setVendorToClaim({ id: data.vendor_id, ...data } as Vendor);
             }
         };
         fetchVendor();
     }
-  }, [searchParams, db, vendorToClaim]);
+  }, [searchParams, vendorToClaim]);
   
   useEffect(() => {
     if (vendorToClaim) {
       setRole('vendor');
       setCompanyName(vendorToClaim.name || '');
-      setPhone(authUser?.phoneNumber || vendorToClaim.phone || '');
+      setPhone(authUser?.phone || vendorToClaim.phone || '');
       setEmail(authUser?.email || vendorToClaim.email || '');
       setCountry(vendorToClaim.region || '');
 
@@ -561,412 +562,433 @@ export function AuthForm({ type, vendorToClaim: vendorProp }: { type: "login" | 
                     type="email"
                     value={email}
                     onChange={handleEmailChange}
+                    placeholder="you@example.com"
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button type="submit" className="w-full">
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Send Reset Email
+                  Send Reset Link
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  className="w-full"
+                  onClick={() => setFormView('login')}
+                >
+                  Back to Login
                 </Button>
               </div>
             </fieldset>
           </form>
-          <div className="mt-4 text-center text-sm">
-            Remembered your password?{" "}
-            <Button variant="link" className="p-0 h-auto" onClick={() => setFormView('login')}>
-              Back to Login
-            </Button>
-          </div>
         </div>
       );
     }
 
     return (
-       <div className="grid gap-4">
-          <div className="grid gap-2 text-center">
-            <h1 className="text-xl font-bold">Login</h1>
-            <p className="text-balance text-muted-foreground text-xs">
-              Enter your email below to login to your account
-            </p>
-          </div>
-          <form onSubmit={handleLoginSubmit}>
-            <fieldset disabled={isLoading}>
-              <div className="grid gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="email">Email</Label>
+      <div className="grid gap-4">
+        <div className="grid gap-2 text-center">
+          <h1 className="text-2xl font-bold">Welcome Back</h1>
+          <p className="text-balance text-muted-foreground text-xs">
+            Enter your login credentials below
+          </p>
+        </div>
+        <form onSubmit={handleLoginSubmit}>
+          <fieldset disabled={isLoading}>
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={handleEmailChange}
+                  placeholder="you@example.com"
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <div className="flex items-center">
+                  <Label htmlFor="password">Password</Label>
+                </div>
+                <div className="relative">
                   <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={handleEmailChange}
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={handlePasswordChange}
                     required
                   />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
                 </div>
-                <div className="grid gap-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Password</Label>
-                  </div>
-                  <div className="relative">
-                    <Input 
-                      id="password" 
-                      type={showPassword ? "text" : "password"} 
-                      value={password}
-                      onChange={handlePasswordChange}
-                      required 
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4" />}
-                    </Button>
-                  </div>
-                </div>
-                {searchError && <p className="text-sm text-destructive">{searchError}</p>}
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Login
-                </Button>
               </div>
-            </fieldset>
-          </form>
-
-            <div className="mt-4 text-center text-sm">
-              Don&apos;t have an account?{" "}
-              <Link href="/signup" className="text-accent">
-                Sign up
-              </Link>
+              {searchError && <p className="text-sm text-destructive">{searchError}</p>}
+              <Button type="submit" className="w-full">
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Login
+              </Button>
             </div>
-            <div className="mt-2 text-center text-sm">
-                Forgotten your password?{" "}
-                <Button variant="link" className="p-0 h-auto text-sm text-accent" onClick={() => setFormView('reset')}>
-                Recover it now
-                </Button>
-            </div>
+          </fieldset>
+        </form>
+        <div className="text-center text-sm">
+          <Button 
+            variant="link" 
+            className="px-0 font-normal text-muted-foreground"
+            onClick={() => setFormView('reset')}
+          >
+            Forgot password?
+          </Button>
         </div>
-    )
+        <div className="text-center text-sm">
+          Don't have an account?{" "}
+          <Link href="/signup" className="text-accent">
+            Sign up
+          </Link>
+        </div>
+      </div>
+    );
   }
 
-  const countryOptions: ComboboxOption[] = countries.map(c => ({ value: c.value, label: c.label }));
-  const genderOptions: ComboboxOption[] = [
-    { value: "male", label: "Male" },
-    { value: "female", label: "Female" },
-    { value: "other", label: "Other" },
-    { value: "prefer_not_to_say", label: "Prefer not to say" },
-  ];
-  
+  // SIGNUP FORM
+  const countryOptions: ComboboxOption[] = countries.map((country) => ({
+    value: country.name,
+    label: country.name,
+  }));
+
   return (
     <>
       <div className="grid gap-6">
-        {!vendorToClaim && (
-          <div className="space-y-4">
-            <div className="space-y-2">
-                <ToggleGroup
-                type="single"
-                value={role}
-                onValueChange={handleSetRole}
-                className="grid grid-cols-2 gap-2 bg-secondary/50 p-1 rounded-lg"
-                variant="outline"
-                >
-                <ToggleGroupItem
-                    value="user"
-                    className="gap-2 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-                >
-                    <User className="h-4 w-4" />
-                    Personal User
-                </ToggleGroupItem>
-                <ToggleGroupItem
-                    value="vendor"
-                    className="gap-2 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-                >
-                    <Building className="h-4 w-4" />
-                    Business Owner
-                </ToggleGroupItem>
-                </ToggleGroup>
-            </div>
-          </div>
-        )}
+        <div className="grid gap-2 text-center">
+          <h1 className="text-2xl font-bold">
+            {vendorToClaim ? "Claim Business & Complete Profile" : "Create Account"}
+          </h1>
+          {vendorToClaim && (
+            <p className="text-balance text-muted-foreground text-xs">
+              You're claiming: <b>{vendorToClaim.name}</b>
+            </p>
+          )}
+          {!vendorToClaim && (
+            <p className="text-balance text-muted-foreground text-xs">
+              Fill in your details below to get started
+            </p>
+          )}
+        </div>
 
-        {role === "vendor" && !showMainSignupForm && vendorSignupContent}
+        {role === 'vendor' && !vendorToClaim && (
+          <>
+            {vendorSignupContent}
+          </>
+        )}
 
         {showMainSignupForm && (
           <form onSubmit={handleSignupSubmit}>
-            <fieldset disabled={isLoading} className="space-y-6">
-            {role === "vendor" && (vendorStep === "create" || vendorToClaim) && (
+            <fieldset disabled={isLoading}>
+            <div className="grid gap-6">
+            
+            <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <h2 className="text-lg font-semibold leading-none tracking-tight">Account Type</h2>
+                </div>
+                <ToggleGroup
+                  type="single"
+                  value={role}
+                  onValueChange={handleSetRole}
+                  className="grid w-full grid-cols-2 gap-2"
+                  disabled={!!vendorToClaim}
+                >
+                  <ToggleGroupItem
+                    value="user"
+                    className="flex flex-col items-center gap-2 p-4 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                  >
+                    <User className="h-6 w-6" />
+                    <span className="text-sm font-medium">Customer</span>
+                  </ToggleGroupItem>
+                  <ToggleGroupItem
+                    value="vendor"
+                    className="flex flex-col items-center gap-2 p-4 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                  >
+                    <Building className="h-6 w-6" />
+                    <span className="text-sm font-medium">Business Owner</span>
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+
+              <Separator />
+
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <h2 className="text-lg font-semibold leading-none tracking-tight">Business Details</h2>
+                  <h2 className="text-lg font-semibold leading-none tracking-tight">Personal Details</h2>
                 </div>
-                {vendorStep === "create" && !vendorToClaim && (
-                    <Button
-                      variant="link"
-                      size="sm"
-                      onClick={() => setVendorStep("search")}
-                      className="p-0 h-auto"
-                    >
-                      <ChevronLeft className="h-4 w-4 mr-1" /> Back to business
-                      search
-                    </Button>
-                  )}
+                <div className="space-y-4">
+                {role === "vendor" && (
                   <div className="space-y-2">
-                    <Label htmlFor="companyName">Business Name</Label>
+                    <Label htmlFor="companyName">Business / Company Name</Label>
                     <Input
                       id="companyName"
+                      type="text"
                       value={companyName}
                       onChange={handleCompanyNameChange}
-                      required
+                      required={role === 'vendor'}
                       disabled={!!vendorToClaim}
                     />
                   </div>
-              </div>
-            )}
-            
-            <Separator />
-
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <h2 className="text-lg font-semibold leading-none tracking-tight">Your Information</h2>
-                <p className="text-sm text-muted-foreground">This will be used to create your account.</p>
-              </div>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">
-                    {role === "user"
-                      ? "Full Name"
-                      : "Your Full Name (As representative)"}
-                  </Label>
-                  <Input
-                    id="name"
-                    value={name}
-                    onChange={handleNameChange}
-                    required
-                  />
-                </div>
+                )}
 
                 {role === "user" && (
-                  <>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Date of Birth</Label>
-                        <div className="grid grid-cols-3 gap-2">
-                           <Input 
-                                placeholder="DD" 
-                                value={day} 
-                                onChange={(e) => setDay(e.target.value)} 
-                                maxLength={2} 
-                                className="placeholder:text-[90%]"
-                            />
-                            <Input 
-                                placeholder="MM" 
-                                value={month} 
-                                onChange={(e) => setMonth(e.target.value)} 
-                                maxLength={2} 
-                                className="placeholder:text-[90%]"
-                            />
-                            <Input 
-                                placeholder="YYYY" 
-                                value={year} 
-                                onChange={(e) => setYear(e.target.value)} 
-                                maxLength={4}
-                                className="w-full placeholder:text-[90%]"
-                            />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Gender</Label>
-                         <Combobox
-                          options={genderOptions}
-                          value={gender}
-                          onChange={(value) => setGender(value as any)}
-                          placeholder="Select a gender"
-                          searchPlaceholder="Search genders..."
-                          noResultsMessage="No gender found."
-                          searchDisabled
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="profession">Profession (Optional)</Label>
-                      <Input
-                        id="profession"
-                        type="text"
-                        value={profession}
-                        onChange={handleProfessionChange}
-                      />
-                    </div>
-                  </>
-                )}
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Mobile Number</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={phone}
-                    onChange={handlePhoneChange}
-                    required
-                    disabled={!!authUser?.phoneNumber}
-                  />
-                </div>
-
-                {(role === "user" ||
-                  (role === "vendor" && vendorStep === "create")) && (
-                  <div className="space-y-4 pt-2">
-                     <Separator />
-                     <p className="text-sm font-medium pt-2">Address</p>
-                    <div className="space-y-2">
-                      <Input
-                        id="addressLine1"
-                        value={addressLine1}
-                        onChange={handleAddressLine1Change}
-                        placeholder="Address Line 1"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Input
-                        id="addressLine2"
-                        value={addressLine2}
-                        onChange={handleAddressLine2Change}
-                        placeholder="Address Line 2 (Optional)"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Combobox
-                          options={countryOptions}
-                          value={country}
-                          onChange={handleCountryChange}
-                          placeholder="Country"
-                          searchPlaceholder="Search countries..."
-                          noResultsMessage="No country found."
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Input
-                          id="postalCode"
-                          value={postalCode}
-                          onChange={handlePostalCodeChange}
-                          placeholder="Postal Code"
-                          required
-                        />
-                      </div>
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Full Name</Label>
+                    <Input
+                      id="name"
+                      type="text"
+                      value={name}
+                      onChange={handleNameChange}
+                      required
+                    />
                   </div>
                 )}
+
+                {role === 'user' && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Date of Birth</Label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <Select value={day} onValueChange={setDay}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Day" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                              <SelectItem key={d} value={d.toString()}>{d}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select value={month} onValueChange={setMonth}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Month" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, i) => (
+                              <SelectItem key={i + 1} value={(i + 1).toString()}>{m}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select value={year} onValueChange={setYear}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Year" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i).map((y) => (
+                              <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Gender</Label>
+                      <Combobox
+                        options={[
+                          { value: 'male', label: 'Male' },
+                          { value: 'female', label: 'Female' },
+                          { value: 'other', label: 'Other' },
+                          { value: 'prefer_not_to_say', label: 'Prefer not to say' },
+                        ]}
+                        value={gender || ''}
+                        onChange={(value) => setGender(value as any)}
+                        placeholder="Select gender"
+                        searchPlaceholder="Search..."
+                        noResultsMessage="No gender found."
+                        searchDisabled
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="profession">Profession (Optional)</Label>
+                    <Input
+                      id="profession"
+                      type="text"
+                      value={profession}
+                      onChange={handleProfessionChange}
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="phone">Mobile Number</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={handlePhoneChange}
+                  required
+                  disabled={!!authUser?.phone}
+                />
               </div>
-            </div>
-            
-            <Separator />
-            
-            <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <h2 className="text-lg font-semibold leading-none tracking-tight">Login Credentials</h2>
-                </div>
-                <div className="space-y-4">
-                     <div className="space-y-2">
-                        <Label htmlFor="email">Login Email</Label>
-                        <Input
-                        id="email"
-                        type="email"
-                        value={email}
-                        onChange={handleEmailChange}
+
+              {(role === "user" ||
+                (role === "vendor" && vendorStep === "create")) && (
+                <div className="space-y-4 pt-2">
+                   <Separator />
+                   <p className="text-sm font-medium pt-2">Address</p>
+                  <div className="space-y-2">
+                    <Input
+                      id="addressLine1"
+                      value={addressLine1}
+                      onChange={handleAddressLine1Change}
+                      placeholder="Address Line 1"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Input
+                      id="addressLine2"
+                      value={addressLine2}
+                      onChange={handleAddressLine2Change}
+                      placeholder="Address Line 2 (Optional)"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Combobox
+                        options={countryOptions}
+                        value={country}
+                        onChange={handleCountryChange}
+                        placeholder="Country"
+                        searchPlaceholder="Search countries..."
+                        noResultsMessage="No country found."
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Input
+                        id="postalCode"
+                        value={postalCode}
+                        onChange={handlePostalCodeChange}
+                        placeholder="Postal Code"
                         required
-                        disabled={!!authUser?.email}
-                        />
+                      />
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="password">Password</Label>
-                        <div className="relative">
-                        <Input
-                            id="password"
-                            type={showPassword ? "text" : "password"}
-                            value={password}
-                            onChange={handlePasswordChange}
-                            required
-                        />
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
-                            onClick={() => setShowPassword(!showPassword)}
-                        >
-                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </Button>
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="confirmPassword">Re-type Password</Label>
-                        <div className="relative">
-                        <Input
-                            id="confirmPassword"
-                            type={showPassword ? "text" : "password"}
-                            value={confirmPassword}
-                            onChange={handleConfirmPasswordChange}
-                            required
-                        />
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
-                            onClick={() => setShowPassword(!showPassword)}
-                        >
-                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </Button>
-                        </div>
-                    </div>
+                  </div>
                 </div>
+              )}
             </div>
-
-
-            <div className="items-top flex space-x-2 pt-4">
-              <Checkbox
-                id="terms"
-                checked={isPrivacyAgreed}
-                onCheckedChange={handlePrivacyCheckChange}
-                disabled={isLoading}
-              />
-              <div className="grid gap-1.5 leading-none">
-                <Label
-                  htmlFor="terms"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  I agree to the Privacy Policy &amp; Terms.
-                </Label>
+          </div>
+          
+          <Separator />
+          
+          <div className="space-y-4">
+              <div className="space-y-1.5">
+                <h2 className="text-lg font-semibold leading-none tracking-tight">Login Credentials</h2>
               </div>
+              <div className="space-y-4">
+                   <div className="space-y-2">
+                      <Label htmlFor="email">Login Email</Label>
+                      <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={handleEmailChange}
+                      required
+                      disabled={!!authUser?.email}
+                      />
+                  </div>
+                  <div className="space-y-2">
+                      <Label htmlFor="password">Password</Label>
+                      <div className="relative">
+                      <Input
+                          id="password"
+                          type={showPassword ? "text" : "password"}
+                          value={password}
+                          onChange={handlePasswordChange}
+                          required
+                      />
+                      <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+                          onClick={() => setShowPassword(!showPassword)}
+                      >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                      </div>
+                  </div>
+                  <div className="space-y-2">
+                      <Label htmlFor="confirmPassword">Re-type Password</Label>
+                      <div className="relative">
+                      <Input
+                          id="confirmPassword"
+                          type={showPassword ? "text" : "password"}
+                          value={confirmPassword}
+                          onChange={handleConfirmPasswordChange}
+                          required
+                      />
+                      <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+                          onClick={() => setShowPassword(!showPassword)}
+                      >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+
+
+          <div className="items-top flex space-x-2 pt-4">
+            <Checkbox
+              id="terms"
+              checked={isPrivacyAgreed}
+              onCheckedChange={handlePrivacyCheckChange}
+              disabled={isLoading}
+            />
+            <div className="grid gap-1.5 leading-none">
+              <Label
+                htmlFor="terms"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                I agree to the Privacy Policy &amp; Terms.
+              </Label>
             </div>
+          </div>
 
-            <Button
-              type="submit"
-              className="w-full !mt-8"
-              disabled={isLoading || !isPrivacyAgreed}
-            >
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {vendorToClaim
-                ? "Claim Business &amp; Complete Profile"
-                : "Create Account"}
-            </Button>
-            </fieldset>
-          </form>
-        )}
+          <Button
+            type="submit"
+            className="w-full !mt-8"
+            disabled={isLoading || !isPrivacyAgreed}
+          >
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {vendorToClaim
+              ? "Claim Business &amp; Complete Profile"
+              : "Create Account"}
+          </Button>
+          </fieldset>
+        </form>
+      )}
 
-        <div className="mt-4 text-center text-sm">
-          Already have an account?{" "}
-              <Link href="/login" className="text-accent">
-                Log in
-              </Link>
-        </div>
+      <div className="mt-4 text-center text-sm">
+        Already have an account?{" "}
+            <Link href="/login" className="text-accent">
+              Log in
+            </Link>
       </div>
-      <PrivacyPolicyDialog
-        isOpen={isPrivacyDialogOpen}
-        onOpenChange={setIsPrivacyDialogOpen}
-        onAgree={handleAgreeToPrivacy}
-      />
-    </>
-  );
+    </div>
+    <PrivacyPolicyDialog
+      isOpen={isPrivacyDialogOpen}
+      onOpenChange={setIsPrivacyDialogOpen}
+      onAgree={handleAgreeToPrivacy}
+    />
+  </>
+);
 }

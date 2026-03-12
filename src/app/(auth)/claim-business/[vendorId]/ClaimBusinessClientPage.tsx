@@ -21,14 +21,12 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
-import { useFirestore } from '@/firebase';
+import { supabase } from '@/lib/supabase/client';
 import { useRouter, notFound } from 'next/navigation';
-import { doc, getDoc } from 'firebase/firestore';
 import Logo from '@/components/core/Logo';
 
 export default function ClaimBusinessClientPage({ vendorId }: { vendorId: string }) {
   const router = useRouter();
-  const db = useFirestore();
 
   const [vendor, setVendor] = useState<Vendor | null>(null);
   const [isLoadingVendor, setIsLoadingVendor] = useState(true);
@@ -38,16 +36,19 @@ export default function ClaimBusinessClientPage({ vendorId }: { vendorId: string
 
   useEffect(() => {
     async function fetchVendorData() {
-        if (!db || !vendorId) {
+        if (!vendorId) {
             return;
         };
         setIsLoadingVendor(true);
         try {
-            const vendorRef = doc(db, 'vendors', vendorId);
-            const vendorSnap = await getDoc(vendorRef);
-            if (vendorSnap.exists()) {
-                const fetchedVendor = { id: vendorSnap.id, ...vendorSnap.data() } as Vendor;
-                setVendor(fetchedVendor);
+            const { data, error } = await supabase
+                .from('vendors')
+                .select('*')
+                .eq('vendor_id', vendorId)
+                .single();
+            
+            if (data && !error) {
+                setVendor({ id: data.vendor_id, ...data } as Vendor);
             } else {
                 setVendor(null);
             }
@@ -59,7 +60,7 @@ export default function ClaimBusinessClientPage({ vendorId }: { vendorId: string
         }
     }
     fetchVendorData();
-  }, [vendorId, db]);
+  }, [vendorId]);
 
   // When user confirms this is their business, navigate to the dedicated signup page.
   const handleProceedToClaim = () => {

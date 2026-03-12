@@ -1,9 +1,7 @@
-
 'use client';
 
 import { AuthFormWrapper } from "@/components/auth/AuthFormWrapper";
-import { useFirestore } from "@/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { supabase } from "@/lib/supabase/client";
 import { notFound, useParams } from "next/navigation";
 import type { Vendor } from "@/lib/types";
 import { Loader2 } from "lucide-react";
@@ -14,7 +12,6 @@ import { useState, useEffect } from "react";
 function ClaimBusinessSignupClientPage() {
   const params = useParams();
   const vendorId = params.vendorId as string;
-  const db = useFirestore();
 
   const [vendor, setVendor] = useState<Vendor | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -23,15 +20,21 @@ function ClaimBusinessSignupClientPage() {
     // Fetch the vendor data only once when the component mounts.
     // This prevents the component from re-rendering when the auth state changes during signup.
     const fetchVendorData = async () => {
-        if (!vendorId || !db) {
+        if (!vendorId) {
             setIsLoading(false);
             return;
         }
         try {
-            const vendorRef = doc(db, 'vendors', vendorId);
-            const vendorSnap = await getDoc(vendorRef);
-            if (vendorSnap.exists()) {
-                setVendor({ id: vendorSnap.id, ...vendorSnap.data() } as Vendor);
+            const { data, error } = await supabase
+                .from('vendors')
+                .select('*')
+                .eq('vendor_id', vendorId)
+                .single();
+            
+            if (error) throw error;
+            
+            if (data) {
+                setVendor({ id: data.vendor_id, ...data } as Vendor);
             } else {
                 setVendor(null); // Vendor not found
             }
@@ -44,7 +47,7 @@ function ClaimBusinessSignupClientPage() {
     };
     
     fetchVendorData();
-  }, [vendorId, db]); // This effect runs only when vendorId or db connection changes.
+  }, [vendorId]); // This effect runs only when vendorId changes.
 
   if (isLoading) {
     return (

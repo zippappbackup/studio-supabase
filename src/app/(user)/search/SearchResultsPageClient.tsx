@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
@@ -154,7 +153,7 @@ VendorCard.displayName = 'VendorCard';
 
 
 const SearchResultsPageClient = React.memo(function SearchResultsPageClient() {
-    const { user, db } = useAuth();
+    const { user } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
     const searchParams = useSearchParams();
@@ -360,5 +359,3 @@ const SearchResultsPageClient = React.memo(function SearchResultsPageClient() {
 SearchResultsPageClient.displayName = 'SearchResultsPageClient';
 
 export default SearchResultsPageClient;
-
-    

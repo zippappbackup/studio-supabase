@@ -1,13 +1,12 @@
-
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/lib/auth";
-import { useDoc, useMemoFirebase, useFirestore } from "@/firebase";
-import { doc } from "firebase/firestore";
+import { useSupabaseDoc } from '@/lib/supabase/hooks';
+import { supabase } from '@/lib/supabase/client';
 import type { Offering, Vendor } from "@/lib/types";
 import { OfferingEditDialog } from "./OfferingEditDialog";
 import { Badge } from "@/components/ui/badge";
@@ -15,14 +14,16 @@ import { OfferingActions } from "./OfferingActions";
 
 export default function OfferingsPage() {
     const { user } = useAuth();
-    const db = useFirestore();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [selectedOffering, setSelectedOffering] = useState<Offering | undefined>(undefined);
 
     const vendorId = user?.vendorId || user?.uid;
 
-    const vendorRef = useMemoFirebase(() => (vendorId && db ? doc(db, "vendors", vendorId) : null), [vendorId, db]);
-    const { data: vendor, isLoading } = useDoc<Vendor>(vendorRef);
+    const vendorQuery = useMemo(
+        () => vendorId ? () => supabase.from('vendors').select('*').eq('vendor_id', vendorId).single() : () => null,
+        [vendorId]
+    );
+    const { data: vendor, isLoading } = useSupabaseDoc<Vendor>(vendorQuery);
     
     const offerings = vendor?.offerings || [];
 

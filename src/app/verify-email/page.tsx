@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
@@ -13,13 +12,13 @@ import {
 } from '@/components/ui/card';
 import { Loader2, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
-import { isSignInWithEmailLink, signInWithEmailLink, getAuth } from 'firebase/auth';
-import { useFirestore, initializeFirebase } from '@/firebase';
+import { supabase } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 
 function VerifyEmailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
   const [status, setStatus] = useState<'verifying' | 'success' | 'error'>(
     'verifying'
   );
@@ -29,59 +28,55 @@ function VerifyEmailContent() {
 
   useEffect(() => {
     const verify = async () => {
+      // Extract vendorId and source from URL params
+      const vid = searchParams.get('vendorId');
+      const src = searchParams.get('source');
+      const type = searchParams.get('type');
       
-      const auth = getAuth(initializeFirebase().firebaseApp);
-      const link = window.location.href;
-      
-      // Extract vendorId and source from the link
-      const url = new URL(link);
-      const vid = url.searchParams.get('vendorId');
-      const src = url.searchParams.get('source');
       setVendorId(vid);
       setSource(src);
 
-      if (!isSignInWithEmailLink(auth, link)) {
-        setStatus('error');
-        setMessage('This is not a valid email verification link.');
-        return;
-      }
-
-      let email = window.localStorage.getItem('emailForSignIn');
-      if (!email) {
-        email = window.prompt('Please provide your email for confirmation');
-      }
-
-      if (!email) {
-        setStatus('error');
-        setMessage('Email address is required to complete verification. Please return to the claim page and try again.');
-        return;
-      }
+      // Check for Supabase auth error
+      const error = searchParams.get('error');
+      const errorDescription = searchParams.get('error_description');
       
-      try {
-        const userCredential = await signInWithEmailLink(auth, email, link);
-        window.localStorage.removeItem('emailForSignIn');
-        
-        setStatus('success');
-        setMessage('Your email has been successfully verified. Redirecting you to the final step...');
-
-        // Append the source to the destination URL
-        const destinationUrl = `/claim-business/${vid}?step=signup&source=${src}`;
-        router.replace(destinationUrl);
-
-      } catch (error: any) {
+      if (error) {
         setStatus('error');
-        if (error.code === 'auth/invalid-action-code') {
-          setMessage(
-            'This verification link has expired, is invalid, or has already been used. Please request a new one.'
-          );
+        setMessage(errorDescription || 'An error occurred during verification. Please try again.');
+        return;
+      }
+
+      // Check if this is a confirmation callback from Supabase
+      if (type === 'signup' || type === 'email_change') {
+        // Supabase has already verified the email at this point
+        // Check if user is authenticated
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          setStatus('success');
+          setMessage('Your email has been successfully verified. Redirecting you to the final step...');
+          
+          // Wait a moment then redirect
+          setTimeout(() => {
+            if (vid && src) {
+              router.replace(`/claim-business/${vid}?step=signup&source=${src}`);
+            } else {
+              router.replace('/profile');
+            }
+          }, 1500);
         } else {
-            setMessage(`An error occurred: ${error.message}. Please try generating a new link.`);
+          setStatus('error');
+          setMessage('Session not found. Please try logging in again.');
         }
+      } else {
+        // If we got here without proper params, it might be an old link
+        setStatus('error');
+        setMessage('This verification link is invalid or has expired. Please request a new one.');
       }
     };
 
     verify();
-  }, [router]);
+  }, [router, searchParams]);
 
   const Icon = {
     verifying: Loader2,
@@ -107,7 +102,7 @@ function VerifyEmailContent() {
         </div>
         <CardTitle className="pt-4 text-xl">
           {status === 'verifying' && 'Verifying Your Email...'}
-          {status === 'success' && 'Redirecting...'}
+          {status === 'success' && 'Email Verified!'}
           {status === 'error' && 'Verification Failed'}
         </CardTitle>
         <CardDescription>{message}</CardDescription>
@@ -119,8 +114,19 @@ function VerifyEmailContent() {
       )}
       {status !== 'verifying' && (
         <CardFooter>
-            <Button className="w-full" onClick={() => router.replace(vendorId ? `/claim-business/${vendorId}` : '/home')}>
-                {status === 'success' ? 'Continue to Final Step' : 'Return to Claim Page'}
+            <Button 
+              className="w-full" 
+              onClick={() => {
+                if (status === 'success' && vendorId) {
+                  router.replace(`/claim-business/${vendorId}?step=signup&source=${source}`);
+                } else if (status === 'success') {
+                  router.replace('/profile');
+                } else {
+                  router.replace(vendorId ? `/claim-business/${vendorId}` : '/login');
+                }
+              }}
+            >
+                {status === 'success' ? 'Continue' : 'Return to Login'}
             </Button>
         </CardFooter>
       )}

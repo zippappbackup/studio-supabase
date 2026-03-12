@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -31,7 +30,7 @@ export function FeedbackSummaryDialog({ isOpen, setIsOpen, feedback }: FeedbackS
   if (!feedback) return null;
 
   const formattedDate = feedback.createdAt
-    ? format((feedback.createdAt as any).toDate(), 'dd MMM yyyy, hh:mm a')
+    ? format(new Date(feedback.createdAt), 'dd MMM yyyy, hh:mm a')
     : 'N/A';
 
   return (

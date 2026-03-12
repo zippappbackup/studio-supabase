@@ -1,4 +1,3 @@
-
 "use client";
 
 import "@/app/globals.css";
@@ -9,10 +8,10 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { MobileSidebarToggle } from "@/components/layout/MobileSidebarToggle";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Loader2 } from "lucide-react";
-import { useDoc, useFirestore, useMemoFirebase } from "@/firebase";
-import { doc } from "firebase/firestore";
+import { useSupabaseDoc } from "@/lib/supabase/hooks";
+import { supabase } from "@/lib/supabase/client";
 import type { Vendor } from "@/lib/types";
 import { PendingApprovalPage } from "./PendingApprovalPage";
 
@@ -25,11 +24,14 @@ export default function VendorLayout({
 }) {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const db = useFirestore();
 
   const vendorId = user?.vendorId || user?.uid;
-  const vendorRef = useMemoFirebase(() => vendorId && db ? doc(db, "vendors", vendorId) : null, [vendorId, db]);
-  const { data: vendor, isLoading: isVendorLoading } = useDoc<Vendor>(vendorRef);
+  
+  const vendorQuery = useMemo(
+    () => vendorId ? () => supabase.from('vendors').select('*').eq('vendor_id', vendorId).single() : () => null,
+    [vendorId]
+  );
+  const { data: vendor, isLoading: isVendorLoading } = useSupabaseDoc<Vendor>(vendorQuery);
 
   useEffect(() => {
     // Skip auth checks if in Lighthouse audit mode

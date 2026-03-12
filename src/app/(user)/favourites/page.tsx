@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
@@ -12,8 +11,7 @@ import {
 } from '@/components/ui/card';
 import { Heart, Loader2, Star, Ticket, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
-import { useFirestore } from '@/firebase';
-import { doc, updateDoc, arrayRemove, Timestamp, getDoc } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase/client';
 import type { ZippUser, Vendor, Promotion, UserCollection, RedemptionEvent, Category, GooglePhoto } from "@/lib/types";
 import Link from 'next/link';
 import Image from 'next/image';
@@ -33,7 +31,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Separator } from '@/components/ui/separator';
 import { useAppCache } from '@/context/AppCacheProvider';
-import { runTransaction } from 'firebase/firestore';
 import { getLogoUrl } from '@/lib/utils';
 import { format } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
@@ -41,19 +38,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 /**
  * A robust helper to safely convert various date formats into a JS Date object.
- * Handles Firestore Timestamps, string dates, and number (millisecond) dates.
+ * Handles ISO strings, Date objects, and number (millisecond) dates.
  * Returns null if the input is invalid or cannot be parsed.
  */
 const getSafeDate = (dateInput: any): Date | null => {
     if (!dateInput) return null;
     if (dateInput instanceof Date) {
         return dateInput;
-    }
-    if (typeof dateInput.toDate === 'function') {
-        return dateInput.toDate();
-    }
-    if (typeof dateInput === 'object' && dateInput !== null && typeof (dateInput as any)._seconds === 'number') {
-        return new Date((dateInput as any)._seconds * 1000);
     }
     const date = new Date(dateInput);
     if (!isNaN(date.getTime())) {
@@ -153,7 +144,6 @@ function FavouriteVendorCard({ vendor, onRemove }: { vendor: Vendor; onRemove: (
 
 function FavouritesList() {
   const { user, loading: isUserLoading } = useAuth();
-  const db = useFirestore();
   const { toast } = useToast();
   const { vendorDataset, isVendorDataReady } = useAppCache();
 
@@ -169,13 +159,29 @@ function FavouritesList() {
   }, [favouriteIds, vendorDataset, isVendorDataReady]);
 
   const handleRemove = async (vendorId: string) => {
-    if (!user || !db) return;
+    if (!user) return;
 
-    const userRef = doc(db, 'users', user.uid);
     try {
-        await updateDoc(userRef, {
-            favourites: arrayRemove(vendorId)
-        });
+        // Fetch current user data
+        const { data: currentUser, error: fetchError } = await supabase
+            .from('users')
+            .select('favourites')
+            .eq('id', user.uid)
+            .single();
+        
+        if (fetchError) throw fetchError;
+
+        // Remove vendorId from favourites array
+        const updatedFavourites = (currentUser.favourites || []).filter((id: string) => id !== vendorId);
+
+        // Update user with new favourites array
+        const { error: updateError } = await supabase
+            .from('users')
+            .update({ favourites: updatedFavourites })
+            .eq('id', user.uid);
+        
+        if (updateError) throw updateError;
+
         toast({
             title: "Removed from Favourites",
             description: "The vendor has been removed from your list.",
@@ -235,17 +241,21 @@ function PromotionCard({
     onUncollect
 }: PromotionCardProps) {
   const [vendorName, setVendorName] = useState<string | null>(null);
-  const db = useFirestore();
   const promotion = collection.promotion;
 
   useEffect(() => {
     async function fetchVendorName() {
-        if (promotion.vendorId && db) {
-            const vendorRef = doc(db, 'vendors', promotion.vendorId);
+        if (promotion.vendorId) {
             try {
-                const vendorSnap = await getDoc(vendorRef);
-                if (vendorSnap.exists()) {
-                    setVendorName(vendorSnap.data().name);
+                const { data, error } = await supabase
+                    .from('vendors')
+                    .select('name')
+                    .eq('vendor_id', promotion.vendorId)
+                    .single();
+                
+                if (error) throw error;
+                if (data) {
+                    setVendorName(data.name);
                 }
             } catch (error) {
                 console.error("Error fetching vendor name for promo card:", error);
@@ -253,7 +263,7 @@ function PromotionCard({
         }
     }
     fetchVendorName();
-  }, [promotion.vendorId, db]);
+  }, [promotion.vendorId]);
 
   const endDate = getSafeDate(promotion.endAt);
     
@@ -293,7 +303,6 @@ function PromotionCard({
 
 function PromotionsList() {
     const { user: userData, loading: isUserLoading } = useAuth();
-    const db = useFirestore();
     const { toast } = useToast();
     
     const [collectedPromotions, setCollectedPromotions] = useState<(UserCollection & { promotion: Promotion })[]>([]);
@@ -304,7 +313,7 @@ function PromotionsList() {
     
     useEffect(() => {
         const fetchLivePromotions = async () => {
-            if (!userData || !db) {
+            if (!userData) {
                 setIsLoadingPromos(false);
                 return;
             };
@@ -313,12 +322,17 @@ function PromotionsList() {
             const userCollectedRefs = userData.collectedPromotions || [];
             
             const promotionPromises = userCollectedRefs.map(async (collectionRef) => {
-                const vendorRef = doc(db, 'vendors', collectionRef.vendorId);
                 try {
-                    const vendorSnap = await getDoc(vendorRef);
-                    if (vendorSnap.exists()) {
-                        const vendorData = vendorSnap.data() as Vendor;
-                        const promotion = vendorData.promotions?.find(p => p.id === collectionRef.promotionId);
+                    const { data: vendorData, error } = await supabase
+                        .from('vendors')
+                        .select('*')
+                        .eq('vendor_id', collectionRef.vendorId)
+                        .single();
+                    
+                    if (error) throw error;
+                    
+                    if (vendorData) {
+                        const promotion = vendorData.promotions?.find((p: Promotion) => p.id === collectionRef.promotionId);
                         if (promotion) {
                             return { ...collectionRef, promotion };
                         }
@@ -338,7 +352,7 @@ function PromotionsList() {
 
         fetchLivePromotions();
 
-    }, [userData, db]);
+    }, [userData]);
 
 
     const handleRedeem = (collection: UserCollection & { promotion: Promotion }) => {
@@ -350,51 +364,69 @@ function PromotionsList() {
     };
 
     const confirmRedeem = async () => {
-        if (!promotionToRedeem || !userData || !db) return;
+        if (!promotionToRedeem || !userData) return;
 
         toast({ title: "Processing Redemption", description: "Please wait...", variant: "info" });
         
         try {
-            const userRef = doc(db, 'users', userData.uid);
-            const vendorRef = doc(db, 'vendors', promotionToRedeem.vendorId);
+            // Fetch current user data
+            const { data: currentUser, error: userFetchError } = await supabase
+                .from('users')
+                .select('collected_promotions')
+                .eq('id', userData.uid)
+                .single();
             
-            await runTransaction(db, async (transaction) => {
-                const [vendorSnap, userSnap] = await Promise.all([
-                    transaction.get(vendorRef),
-                    transaction.get(userRef)
-                ]);
+            if (userFetchError) throw userFetchError;
 
-                if (!vendorSnap.exists()) throw new Error("Vendor not found during transaction.");
-                if (!userSnap.exists()) throw new Error("User profile not found during transaction.");
+            // Fetch current vendor data
+            const { data: currentVendor, error: vendorFetchError } = await supabase
+                .from('vendors')
+                .select('promotions')
+                .eq('vendor_id', promotionToRedeem.vendorId)
+                .single();
+            
+            if (vendorFetchError) throw vendorFetchError;
+
+            const currentCollections = (currentUser.collected_promotions || []) as UserCollection[];
+            const collectionToRemove = currentCollections.find(c => c.redemptionId === promotionToRedeem.redemptionId);
+
+            if (!collectionToRemove) {
+                console.log("Could not find promotion to redeem in user's collection.");
+                return; 
+            }
+
+            // Remove from user's collected promotions
+            const updatedCollections = currentCollections.filter(c => c.redemptionId !== promotionToRedeem.redemptionId);
+
+            // Update user
+            const { error: userUpdateError } = await supabase
+                .from('users')
+                .update({ collected_promotions: updatedCollections })
+                .eq('id', userData.uid);
+            
+            if (userUpdateError) throw userUpdateError;
+            
+            // Update vendor promotion redemptions
+            const newPromotions = [...(currentVendor.promotions || [])];
+            const promoIndex = newPromotions.findIndex((p: Promotion) => p.id === promotionToRedeem.promotionId);
+
+            if (promoIndex > -1) {
+                const existingRedemptions = newPromotions[promoIndex].redemptions || [];
+                const redemptionEventIndex = existingRedemptions.findIndex(r => r.redemptionId === promotionToRedeem.redemptionId);
                 
-                const currentCollections = (userSnap.data() as ZippUser).collectedPromotions || [];
-                const collectionToRemove = currentCollections.find(c => c.redemptionId === promotionToRedeem.redemptionId);
-
-                if (!collectionToRemove) {
-                    console.log("Could not find promotion to redeem in user's collection.");
-                    return; 
-                }
-
-                transaction.update(userRef, {
-                    collectedPromotions: arrayRemove(collectionToRemove)
-                });
-                
-                const vendorData = vendorSnap.data() as Vendor;
-                const newPromotions = [...(vendorData.promotions || [])];
-                const promoIndex = newPromotions.findIndex(p => p.id === promotionToRedeem.promotionId);
-
-                if (promoIndex > -1) {
-                    const existingRedemptions = newPromotions[promoIndex].redemptions || [];
-                    const redemptionEventIndex = existingRedemptions.findIndex(r => r.redemptionId === promotionToRedeem.redemptionId);
+                if (redemptionEventIndex > -1) {
+                    existingRedemptions[redemptionEventIndex].status = 'redeemed';
+                    existingRedemptions[redemptionEventIndex].redeemedAt = new Date();
+                    newPromotions[promoIndex].redemptions = existingRedemptions;
                     
-                    if (redemptionEventIndex > -1) {
-                        existingRedemptions[redemptionEventIndex].status = 'redeemed';
-                        existingRedemptions[redemptionEventIndex].redeemedAt = new Date();
-                        newPromotions[promoIndex].redemptions = existingRedemptions;
-                        transaction.update(vendorRef, { promotions: newPromotions });
-                    }
+                    const { error: vendorUpdateError } = await supabase
+                        .from('vendors')
+                        .update({ promotions: newPromotions })
+                        .eq('vendor_id', promotionToRedeem.vendorId);
+                    
+                    if (vendorUpdateError) throw vendorUpdateError;
                 }
-            });
+            }
 
             toast({ title: "Promotion Redeemed!", variant: "success" });
         } catch (error: any) {
@@ -405,41 +437,59 @@ function PromotionsList() {
     };
     
     const confirmUncollect = async () => {
-        if (!promotionToUncollect || !userData || !db) return;
+        if (!promotionToUncollect || !userData) return;
         
         toast({ title: "Removing Promotion", description: "Please wait...", variant: "info" });
         try {
-            const userRef = doc(db, 'users', userData.uid);
-            const vendorRef = doc(db, 'vendors', promotionToUncollect.vendorId);
+            // Fetch current user data
+            const { data: currentUser, error: userFetchError } = await supabase
+                .from('users')
+                .select('collected_promotions')
+                .eq('id', userData.uid)
+                .single();
             
-             await runTransaction(db, async (transaction) => {
-                const [vendorSnap, userSnap] = await Promise.all([
-                    transaction.get(vendorRef),
-                    transaction.get(userRef)
-                ]);
+            if (userFetchError) throw userFetchError;
 
-                if (!vendorSnap.exists()) throw new Error("Vendor not found.");
-                if (!userSnap.exists()) throw new Error("User profile not found.");
+            // Fetch current vendor data
+            const { data: currentVendor, error: vendorFetchError } = await supabase
+                .from('vendors')
+                .select('promotions')
+                .eq('vendor_id', promotionToUncollect.vendorId)
+                .single();
+            
+            if (vendorFetchError) throw vendorFetchError;
+            
+            const currentCollections = (currentUser.collected_promotions || []) as UserCollection[];
+            const collectionToRemove = currentCollections.find(c => c.redemptionId === promotionToUncollect.redemptionId);
+
+            if (!collectionToRemove) return;
+
+            // Remove from user's collected promotions
+            const updatedCollections = currentCollections.filter(c => c.redemptionId !== promotionToUncollect.redemptionId);
+
+            // Update user
+            const { error: userUpdateError } = await supabase
+                .from('users')
+                .update({ collected_promotions: updatedCollections })
+                .eq('id', userData.uid);
+            
+            if (userUpdateError) throw userUpdateError;
+
+            // Update vendor promotions
+            const newPromotions = [...(currentVendor.promotions || [])];
+            const promoIndex = newPromotions.findIndex((p: Promotion) => p.id === promotionToUncollect.promotionId);
+
+            if (promoIndex > -1) {
+                const existingRedemptions = newPromotions[promoIndex].redemptions || [];
+                newPromotions[promoIndex].redemptions = existingRedemptions.filter(r => r.redemptionId !== promotionToUncollect.redemptionId);
                 
-                const currentCollections = (userSnap.data() as ZippUser).collectedPromotions || [];
-                const collectionToRemove = currentCollections.find(c => c.redemptionId === promotionToUncollect.redemptionId);
-
-                if (!collectionToRemove) return;
-
-                transaction.update(userRef, {
-                    collectedPromotions: arrayRemove(collectionToRemove)
-                });
-
-                const vendorData = vendorSnap.data() as Vendor;
-                const newPromotions = [...(vendorData.promotions || [])];
-                const promoIndex = newPromotions.findIndex(p => p.id === promotionToUncollect.promotionId);
-
-                if (promoIndex > -1) {
-                    const existingRedemptions = newPromotions[promoIndex].redemptions || [];
-                    newPromotions[promoIndex].redemptions = existingRedemptions.filter(r => r.redemptionId !== promotionToUncollect.redemptionId);
-                    transaction.update(vendorRef, { promotions: newPromotions });
-                }
-            });
+                const { error: vendorUpdateError } = await supabase
+                    .from('vendors')
+                    .update({ promotions: newPromotions })
+                    .eq('vendor_id', promotionToUncollect.vendorId);
+                
+                if (vendorUpdateError) throw vendorUpdateError;
+            }
 
             toast({ title: "Promotion Removed", description: "This promotion has been removed from your collection.", variant: "success" });
         } catch (error: any) {
@@ -474,7 +524,7 @@ function PromotionsList() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {collectedPromotions.map(collection => (
                         <PromotionCard
-                            key={`${collection.promotionId}-${(collection.collectedAt as Timestamp).toMillis()}`}
+                            key={`${collection.promotionId}-${new Date(collection.collectedAt).getTime()}`}
                             collection={collection}
                             onRedeem={() => handleRedeem(collection)}
                             onUncollect={() => handleUncollect(collection)}

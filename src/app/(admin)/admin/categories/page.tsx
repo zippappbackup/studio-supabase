@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { PlusCircle } from "lucide-react";
@@ -14,18 +13,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query } from "firebase/firestore";
-import { useFirestore } from "@/firebase";
+import { useSupabaseCollection } from "@/lib/supabase/hooks";
+import { supabase } from "@/lib/supabase/client";
 import { Category } from "@/lib/types";
 import { CategoryEditDialog } from "./CategoryEditDialog";
 import { CategoryActions } from "./CategoryActions";
 
 export default function CategoriesPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const db = useFirestore();
-  const categoriesQuery = useMemoFirebase(() => db ? query(collection(db, "categories")) : null, [db]);
-  const { data: categories, isLoading } = useCollection<Category>(categoriesQuery);
+  
+  const categoriesQuery = useMemo(
+    () => () => supabase.from('categories').select('*').order('name'),
+    []
+  );
+  
+  const { data: categories, isLoading } = useSupabaseCollection<Category>(categoriesQuery);
   const [logs, setLogs] = useState<string[]>([]);
   
   // The logMessage function is kept to avoid breaking child components that require it.

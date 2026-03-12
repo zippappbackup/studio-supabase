@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -10,12 +9,10 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreVertical, Loader2 } from "lucide-react";
-import { useFirestore, errorEmitter } from "@/firebase";
-import { doc, updateDoc, arrayRemove } from "firebase/firestore";
+import { supabase } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Promotion } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
-import { FirestorePermissionError } from "@/firebase/errors";
 
 interface PromotionActionsProps {
     promotion: Promotion;
@@ -23,27 +20,41 @@ interface PromotionActionsProps {
 }
 
 export function PromotionActions({ promotion, onEdit }: PromotionActionsProps) {
-  const db = useFirestore();
   const { user } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleDelete = async () => {
-    if (!db || !user) return;
+    if (!user) return;
     const vendorId = user.vendorId || user.uid;
 
     if (confirm(`Are you sure you want to delete "${promotion.title}"?`)) {
         setIsLoading(true);
-        const vendorRef = doc(db, "vendors", vendorId);
+        
         try {
-            await updateDoc(vendorRef, {
-                promotions: arrayRemove(promotion)
-            });
+            // Fetch current vendor
+            const { data: vendor, error: fetchError } = await supabase
+                .from('vendors')
+                .select('promotions')
+                .eq('vendor_id', vendorId)
+                .single();
+            
+            if (fetchError) throw fetchError;
+            
+            // Remove the promotion from the array
+            const updatedPromotions = (vendor.promotions || []).filter((p: Promotion) => p.id !== promotion.id);
+            
+            // Save back to database
+            const { error: updateError } = await supabase
+                .from('vendors')
+                .update({ promotions: updatedPromotions })
+                .eq('vendor_id', vendorId);
+            
+            if (updateError) throw updateError;
+            
             toast({ title: "Promotion Deleted", description: `"${promotion.title}" has been removed.`, variant: "success" });
-        } catch(e: any) {
-            toast({ title: "Error", description: `Could not delete promotion: ${e.message}`, variant: "destructive" });
-            const permissionError = new FirestorePermissionError({ path: vendorRef.path, operation: 'update' });
-            errorEmitter.emit('permission-error', permissionError);
+        } catch(error: any) {
+            toast({ title: "Error", description: error.message || "Could not delete promotion.", variant: "destructive" });
         } finally {
             setIsLoading(false);
         }

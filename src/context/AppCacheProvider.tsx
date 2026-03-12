@@ -1,12 +1,9 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef, useMemo } from 'react';
-import { collection, getDocs, query, where, doc, documentId, getDoc, limit } from 'firebase/firestore';
-import { useFirestore, initializeFirebase } from '@/firebase';
+import { supabase } from '@/lib/supabase/client';
 import type { Category, Promotion, Vendor } from '@/lib/types';
 import { useAuth } from '@/lib/auth';
-import { getFunctions, httpsCallable } from 'firebase/functions';
 
 const VENDOR_CACHE_KEY = 'zipp_vendor_dataset';
 const CATEGORY_CACHE_KEY = 'zipp_category_cache';
@@ -34,7 +31,6 @@ interface AppCacheContextType {
 const AppCacheContext = createContext<AppCacheContextType | undefined>(undefined);
 
 export function AppCacheProvider({ children }: { children: ReactNode }) {
-  const db = useFirestore();
   const [vendorDataset, setVendorDataset] = useState<Vendor[] | null>(null);
   const [isVendorDataReady, setIsVendorDataReady] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -47,8 +43,8 @@ export function AppCacheProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     async function syncVendorDataset() {
-      if (!db || isSyncing.current) {
-        if(isSyncing.current) console.log("AppCacheProvider: Data sync already initiated. Skipping.");
+      if (isSyncing.current) {
+        console.log("AppCacheProvider: Data sync already initiated. Skipping.");
         return;
       }
       isSyncing.current = true;
@@ -57,66 +53,81 @@ export function AppCacheProvider({ children }: { children: ReactNode }) {
       setError(null);
       
       try {
+        // Check localStorage cache first
         const cachedItem = localStorage.getItem(VENDOR_CACHE_KEY);
         let cachedData = null;
         if (cachedItem) {
           try {
             cachedData = JSON.parse(cachedItem);
+            // Check if cache is still valid (within 24 hours)
+            if (cachedData?.timestamp && (Date.now() - cachedData.timestamp < CACHE_TTL)) {
+              setVendorDataset(cachedData.data);
+              setIsVendorDataReady(true);
+              isSyncing.current = false;
+              console.log("AppCacheProvider: Using valid cached vendor data");
+              return;
+            }
           } catch (e) {
             console.error("Error parsing localStorage data. Clearing cache.", e);
             localStorage.removeItem(VENDOR_CACHE_KEY);
           }
         }
         
-        let currentVersion = null;
-
-        if (cachedData?.data) {
-          setVendorDataset(cachedData.data);
-          setIsVendorDataReady(true);
-          currentVersion = cachedData.version;
-        }
-
-        const { firebaseApp } = initializeFirebase();
-        const functions = getFunctions(firebaseApp, 'us-central1');
-        const getVendorDatasetFn = httpsCallable(functions, 'getVendorDataset');
-
-        const result: any = await getVendorDatasetFn({ version: currentVersion });
-
-        const { version: newVersion, data: functionData, status } = result.data;
-
-        if (status === 'not-modified') {
-          if (!isVendorDataReady) setIsVendorDataReady(true);
-          isSyncing.current = false;
-          return;
-        }
-
-        if (!newVersion || !functionData?.vendors) {
-          throw new Error("Invalid data structure received from Cloud Function.");
+        // If cache is stale or doesn't exist, fetch from Supabase
+        console.log("AppCacheProvider: Fetching fresh vendor data from Supabase");
+        
+        // Check if there's a pre-computed dataset in vendor_dataset_config table
+        const { data: configData, error: configError } = await supabase
+          .from('vendor_dataset_config')
+          .select('*')
+          .eq('id', 'global')
+          .single();
+        
+        let vendors: Vendor[] = [];
+        
+        if (configData && configData.vendors && !configError) {
+          // Use pre-computed dataset if available
+          console.log("AppCacheProvider: Using pre-computed vendor dataset");
+          vendors = configData.vendors;
+        } else {
+          // Fallback: Query all vendors directly
+          console.log("AppCacheProvider: Fetching all vendors directly from database");
+          const { data: vendorData, error: vendorError } = await supabase
+            .from('vendors')
+            .select('*')
+            .order('name');
+          
+          if (vendorError) throw vendorError;
+          
+          // Transform to match Vendor type (vendor_id -> id)
+          vendors = (vendorData || []).map(v => ({
+            ...v,
+            id: v.vendor_id
+          })) as Vendor[];
         }
         
+        // Cache the data
         const cacheEntry = {
-            version: newVersion,
-            data: functionData.vendors,
-            timestamp: Date.now()
+          data: vendors,
+          timestamp: Date.now()
         };
         localStorage.setItem(VENDOR_CACHE_KEY, JSON.stringify(cacheEntry));
 
-        setVendorDataset(functionData.vendors);
-        
-        if (!isVendorDataReady) setIsVendorDataReady(true);
+        setVendorDataset(vendors);
+        setIsVendorDataReady(true);
+        console.log(`AppCacheProvider: Loaded ${vendors.length} vendors`);
 
       } catch (err: any) {
         const errorMessage = err.message || "An unknown error occurred during sync.";
+        console.error("AppCacheProvider: Error syncing vendor dataset:", errorMessage);
         setError(errorMessage);
-        if (!isVendorDataReady) setIsVendorDataReady(true); // Still allow app to proceed if possible
+        setIsVendorDataReady(true); // Still allow app to proceed
       } finally {
         isSyncing.current = false;
       }
     }
 
     async function syncCategories() {
-      if (!db) return;
-
       try {
         const cachedCategories = localStorage.getItem(CATEGORY_CACHE_KEY);
         if (cachedCategories) {
@@ -127,15 +138,20 @@ export function AppCacheProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        const catSnap = await getDocs(query(collection(db, 'categories')));
-        // Replace hyphenated Firestore ID with the correct `name` field for use throughout the app.
-        const catData = catSnap.docs.map(d => {
-            const data = d.data() as Omit<Category, 'id'>;
-            return { ...data, id: data.name } as Category;
-        });
+        const { data: catData, error } = await supabase
+          .from('categories')
+          .select('*');
         
-        setCategories(catData);
-        localStorage.setItem(CATEGORY_CACHE_KEY, JSON.stringify({ data: catData, timestamp: Date.now() }));
+        if (error) throw error;
+
+        // Replace hyphenated database ID with the correct `name` field for use throughout the app.
+        const categoriesWithName = catData.map(cat => ({
+          ...cat,
+          id: cat.name
+        })) as Category[];
+        
+        setCategories(categoriesWithName);
+        localStorage.setItem(CATEGORY_CACHE_KEY, JSON.stringify({ data: categoriesWithName, timestamp: Date.now() }));
 
       } catch (error) {
           console.error("Failed to initialize categories cache:", error);
@@ -143,7 +159,6 @@ export function AppCacheProvider({ children }: { children: ReactNode }) {
     }
 
     async function syncZippHighlights() {
-      if (!db) return;
       setIsHighlightsLoading(true);
 
       try {
@@ -157,18 +172,23 @@ export function AppCacheProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        const highlightsRef = doc(db, 'zippHighlights', 'singleton');
-        const highlightsSnap = await getDoc(highlightsRef);
+        const { data: highlightsData, error } = await supabase
+          .from('zipp_highlights')
+          .select('vendors')
+          .eq('id', 'singleton')
+          .single();
         
-        if (highlightsSnap.exists()) {
-          const highlightsData = (highlightsSnap.data() as { vendors: Vendor[] }).vendors;
-          setZippHighlights(highlightsData);
-          localStorage.setItem(HIGHLIGHTS_CACHE_KEY, JSON.stringify({ data: highlightsData, timestamp: Date.now() }));
+        if (error) throw error;
+        
+        if (highlightsData?.vendors) {
+          setZippHighlights(highlightsData.vendors);
+          localStorage.setItem(HIGHLIGHTS_CACHE_KEY, JSON.stringify({ data: highlightsData.vendors, timestamp: Date.now() }));
         } else {
             setZippHighlights([]);
         }
       } catch(error) {
         console.error("Failed to fetch Zipp Highlights:", error);
+        setZippHighlights([]);
       } finally {
         setIsHighlightsLoading(false);
       }
@@ -177,7 +197,7 @@ export function AppCacheProvider({ children }: { children: ReactNode }) {
     syncVendorDataset();
     syncCategories();
     syncZippHighlights();
-  }, [db]);
+  }, []);
 
   const getVendorFromSnapshot = useCallback(async (vendorId: string): Promise<Vendor | null> => {
     if (vendorDataset) {
@@ -202,19 +222,20 @@ export function AppCacheProvider({ children }: { children: ReactNode }) {
         }
     }
     
-    if (db) {
-        try {
-            const docRef = doc(db, 'vendors', vendorId);
-            const docSnap = await getDoc(docRef);
-            return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as Vendor : null;
-        } catch (error) {
-            console.error("getVendorFromSnapshot: Direct Firestore read failed.", error);
-            return null;
-        }
+    try {
+        const { data, error } = await supabase
+          .from('vendors')
+          .select('*')
+          .eq('vendor_id', vendorId)
+          .single();
+        
+        if (error) throw error;
+        return data ? { id: data.vendor_id, ...data } as Vendor : null;
+    } catch (error) {
+        console.error("getVendorFromSnapshot: Direct Supabase read failed.", error);
+        return null;
     }
-    
-    return null;
-  }, [db, vendorDataset]);
+  }, [vendorDataset]);
   
   const getUserLocation = useCallback((): Promise<Geolocation | null> => {
     return new Promise((resolve) => {

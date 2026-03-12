@@ -1,150 +1,82 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
-import { getAuth, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import {
-  doc,
-  onSnapshot,
-  updateDoc,
-  arrayUnion,
-  arrayRemove,
-  Firestore,
-} from 'firebase/firestore';
-import { useFirestore } from '@/firebase'; // your helper that returns Firestore instance
-import { Heart } from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react';
+import { Heart, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { Vendor } from "@/lib/types";
+import type { Vendor, ZippUser } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from '@/lib/utils';
-import { Loader2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { useAuth } from '@/lib/auth';
+import { useSupabaseDoc } from '@/lib/supabase/hooks';
+import { supabase } from '@/lib/supabase/client';
 
 /**
- * Robust favorite button + profile subscription that avoids race conditions.
- *
- * Important: this component directly listens to Firebase Auth to determine
- * when we have a final, non-anonymous user. That prevents the "early return"
- * race condition where an anonymous placeholder caused us to bail before
- * subscribing to the real user's Firestore profile.
+ * Favorite button component that lets users save vendors to their favorites list.
  */
 export default function VendorFavoriteButton({ vendor }: { vendor: Vendor }) {
-  const db = useFirestore() as Firestore | undefined;
-  const auth = getAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
-
-  // local representation of auth user (null = signed out)
-  const [authUser, setAuthUser] = useState<FirebaseUser | null>(null);
-  // Firestore profile doc (the canonical source for favourites)
-  const [profile, setProfile] = useState<{ favourites?: string[] } | null>(null);
-
-  const [loadingProfile, setLoadingProfile] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
 
-  // keep unsubscribe refs so we can cleanup reliably
-  const profileUnsubRef = useRef<(() => void) | null>(null);
-  const authUnsubRef = useRef<(() => void) | null>(null);
-
-  useEffect(() => {
-    // Listen to Firebase Auth directly — this catches anonymous -> logged-in transitions.
-    const unsubAuth = onAuthStateChanged(
-      auth,
-      (user) => {
-        // This callback runs on initial auth state and whenever it changes.
-        // user may be null (signed out) or an anonymous placeholder initially.
-        setAuthUser(user);
-        // When auth changes, we will set up (or tear down) the profile snapshot below.
-      },
-      (err) => {
-        console.error('onAuthStateChanged error', err);
-      }
-    );
-
-    authUnsubRef.current = unsubAuth;
-    return () => {
-      // cleanup auth listener if component unmounts
-      if (authUnsubRef.current) authUnsubRef.current();
-    };
-    // Note: we intentionally *do not* include `db` in this effect dependency.
-    // This effect only manages auth state subscription lifetime.
-  }, [auth]);
-
-  useEffect(() => {
-    // This effect handles subscribing to the user's Firestore profile.
-    // It depends on `authUser` and `db`.
-
-    // First, clean up any *previous* profile subscription.
-    // This is critical to prevent leaks when the user logs in/out.
-    if (profileUnsubRef.current) {
-      profileUnsubRef.current();
-      profileUnsubRef.current = null;
-    }
-
-    if (!db || !authUser || authUser.isAnonymous) {
-      // If we don't have a real, signed-in user, we can't get a profile.
-      setProfile(null);
-      setLoadingProfile(false);
-      return;
-    }
-
-    // We have a real user, so try to get their profile doc.
-    const profileRef = doc(db, 'users', authUser.uid);
-    setLoadingProfile(true);
-
-    const unsubProfile = onSnapshot(
-      profileRef,
-      (snapshot) => {
-        setProfile(snapshot.data() as { favourites?: string[] } | null);
-        setLoadingProfile(false);
-      },
-      (err) => {
-        console.error('Error fetching user profile snapshot:', err);
-        setLoadingProfile(false);
-      }
-    );
-
-    // Store the new unsubscribe function so we can clean it up next time.
-    profileUnsubRef.current = unsubProfile;
-
-    return () => {
-      // Final cleanup on component unmount
-      if (profileUnsubRef.current) {
-        profileUnsubRef.current();
-      }
-    };
-  }, [db, authUser]); // This effect re-runs when the user or db changes.
-
+  // Subscribe to user's profile to get their favorites list
+  const userQuery = useMemo(
+    () => user ? () => supabase.from('users').select('favourites').eq('uid', user.uid).single() : () => null,
+    [user]
+  );
+  const { data: profile, isLoading: loadingProfile } = useSupabaseDoc<ZippUser>(userQuery);
 
   const handleToggleFavorite = async () => {
-    if (!db) {
-      toast({ title: 'Database not ready.', variant: 'destructive' });
-      return;
-    }
-    if (!authUser || authUser.isAnonymous) {
+    if (!user) {
       toast({ title: 'Please log in to save favourites.', variant: 'destructive' });
       return;
     }
+    
     if (loadingProfile || !profile) {
-        toast({ title: 'Still loading profile — try again shortly.', variant: 'info' });
-        return;
+      toast({ title: 'Still loading profile — try again shortly.', variant: 'info' });
+      return;
     }
 
     setSaving(true);
-    const userRef = doc(db, 'users', authUser.uid);
     const isCurrentlyFavorited = profile?.favourites?.includes(vendor.id) ?? false;
 
     try {
+      // Fetch current favorites
+      const { data: currentUser, error: fetchError } = await supabase
+        .from('users')
+        .select('favourites')
+        .eq('uid', user.uid)
+        .single();
+      
+      if (fetchError) throw fetchError;
+
+      // Update favorites array
+      let updatedFavourites: string[];
       if (isCurrentlyFavorited) {
-        await updateDoc(userRef, { favourites: arrayRemove(vendor.id) });
-        toast({ title: 'Removed from favourites', variant: 'success' });
+        // Remove from favorites
+        updatedFavourites = (currentUser.favourites || []).filter((id: string) => id !== vendor.id);
       } else {
-        await updateDoc(userRef, { favourites: arrayUnion(vendor.id) });
-        toast({ title: 'Added to favourites', variant: 'success' });
+        // Add to favorites
+        updatedFavourites = [...(currentUser.favourites || []), vendor.id];
       }
+
+      // Save back to database
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ favourites: updatedFavourites })
+        .eq('uid', user.uid);
+      
+      if (updateError) throw updateError;
+
+      toast({ 
+        title: isCurrentlyFavorited ? 'Removed from favourites' : 'Added to favourites', 
+        variant: 'success' 
+      });
     } catch (err) {
-        console.error('Could not update favourites:', err);
-        toast({ title: 'Could not update favourites.', variant: 'destructive' });
+      console.error('Could not update favourites:', err);
+      toast({ title: 'Could not update favourites.', variant: 'destructive' });
     } finally {
-        setSaving(false);
+      setSaving(false);
     }
   };
 
@@ -163,7 +95,7 @@ export default function VendorFavoriteButton({ vendor }: { vendor: Vendor }) {
       className="p-0 h-5 w-5"
     >
       {saving ? (
-          <Loader2 className="h-5 w-5 animate-spin" />
+        <Loader2 className="h-5 w-5 animate-spin" />
       ) : (
         <Heart
           className={cn(

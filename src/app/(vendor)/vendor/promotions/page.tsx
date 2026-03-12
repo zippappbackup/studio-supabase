@@ -1,13 +1,12 @@
-
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { PlusCircle, Ticket } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { useDoc, useFirestore, useMemoFirebase } from "@/firebase";
-import { doc } from "firebase/firestore";
+import { useSupabaseDoc } from "@/lib/supabase/hooks";
+import { supabase } from "@/lib/supabase/client";
 import type { Promotion, Vendor } from "@/lib/types";
 import { format } from "date-fns";
 import { PromotionActions } from "./PromotionActions";
@@ -16,7 +15,7 @@ import Image from "next/image";
 import { PlaceholderImages } from "@/lib/placeholder-images";
 
 function PromotionCard({ promotion, onEdit }: { promotion: Promotion, onEdit: () => void }) {
-  const endDate = (promotion.endAt as any).toDate ? (promotion.endAt as any).toDate() : new Date(promotion.endAt as any);
+  const endDate = new Date(promotion.endAt);
   const isActive = endDate > new Date();
 
   return (
@@ -48,14 +47,16 @@ function PromotionCard({ promotion, onEdit }: { promotion: Promotion, onEdit: ()
 
 export default function PromotionsPage() {
     const { user } = useAuth();
-    const db = useFirestore();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [selectedPromotion, setSelectedPromotion] = useState<Promotion | undefined>(undefined);
 
     const vendorId = user?.vendorId || user?.uid;
 
-    const vendorRef = useMemoFirebase(() => (vendorId && db ? doc(db, "vendors", vendorId) : null), [vendorId, db]);
-    const { data: vendor, isLoading } = useDoc<Vendor>(vendorRef);
+    const vendorQuery = useMemo(
+        () => vendorId ? () => supabase.from('vendors').select('*').eq('vendor_id', vendorId).single() : () => null,
+        [vendorId]
+    );
+    const { data: vendor, isLoading } = useSupabaseDoc<Vendor>(vendorQuery);
     
     const promotions = vendor?.promotions || [];
 

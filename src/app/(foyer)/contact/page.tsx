@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -11,14 +10,12 @@ import Link from 'next/link';
 import Logo from '@/components/core/Logo';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
-import { useFirestore } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 
 export default function ContactPage() {
-  const db = useFirestore();
   const { toast } = useToast();
   const [formData, setFormData] = useState({ name: '', email: '', subject: '', message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,21 +36,24 @@ export default function ContactPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!db) {
-      toast({ title: 'Error', description: 'Database connection not available.', variant: 'destructive' });
-      return;
-    }
     if (!formData.name || !formData.email || !formData.subject || !formData.message) {
       toast({ title: 'Missing Fields', description: 'Please fill out all fields.', variant: 'destructive' });
       return;
     }
     setIsSubmitting(true);
     try {
-      const feedbackCollection = collection(db, 'feedback');
-      await addDoc(feedbackCollection, {
-        ...formData,
-        createdAt: serverTimestamp(),
-      });
+      const { error } = await supabase
+        .from('feedback')
+        .insert({
+          name: formData.name,
+          email: formData.email,
+          subject: formData.subject,
+          message: formData.message,
+          created_at: new Date().toISOString(),
+        });
+      
+      if (error) throw error;
+      
       toast({ title: 'Feedback Sent!', description: "Thank you for your message. We'll get back to you soon.", variant: 'success' });
       setFormData({ name: '', email: '', subject: '', message: '' }); // Clear form
     } catch (error: any) {

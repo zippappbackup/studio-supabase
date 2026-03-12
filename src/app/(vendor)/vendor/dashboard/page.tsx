@@ -1,12 +1,11 @@
-
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, Ticket } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { useDoc, useMemoFirebase, useFirestore } from "@/firebase";
-import { doc } from "firebase/firestore";
+import { useSupabaseDoc } from "@/lib/supabase/hooks";
+import { supabase } from "@/lib/supabase/client";
 import type { Vendor, Promotion } from "@/lib/types";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -98,7 +97,7 @@ function PromotionsBreakdownCard({ promotions, isLoading }: { promotions: Promot
                     <TableBody>
                         {promotions.map((promo) => {
                              const stats = calculateStats(promo);
-                             const endDate = (promo.endAt as any)?.toDate ? (promo.endAt as any).toDate() : new Date();
+                             const endDate = new Date(promo.endAt);
                              const isActive = endDate > new Date();
 
                              return (
@@ -123,12 +122,14 @@ function PromotionsBreakdownCard({ promotions, isLoading }: { promotions: Promot
 
 export default function VendorDashboard() {
   const { user } = useAuth();
-  const db = useFirestore();
   
   const vendorId = user?.vendorId || user?.uid;
 
-  const vendorRef = useMemoFirebase(() => vendorId && db ? doc(db, "vendors", vendorId) : null, [vendorId, db]);
-  const { data: vendor, isLoading: isVendorLoading } = useDoc<Vendor>(vendorRef);
+  const vendorQuery = useMemo(
+    () => vendorId ? () => supabase.from('vendors').select('*').eq('vendor_id', vendorId).single() : () => null,
+    [vendorId]
+  );
+  const { data: vendor, isLoading: isVendorLoading } = useSupabaseDoc<Vendor>(vendorQuery);
   
   const welcomeMessage = isVendorLoading 
     ? "Loading Dashboard..." 
@@ -145,7 +146,7 @@ export default function VendorDashboard() {
     
     const subscriptionDescription = useMemo(() => {
         if (vendor?.subscriptionStatus === 'trial' && vendor.trialStartedAt) {
-            const trialStartDate = (vendor.trialStartedAt as any).toDate ? (vendor.trialStartedAt as any).toDate() : new Date(vendor.trialStartedAt as any);
+            const trialStartDate = new Date(vendor.trialStartedAt);
             const trialEndDate = new Date(trialStartDate);
             trialEndDate.setDate(trialEndDate.getDate() + 14); // Assuming a 14-day trial
             

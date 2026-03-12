@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -8,28 +7,45 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useFirestore } from "@/firebase";
+import { supabase } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { doc, updateDoc, serverTimestamp, arrayUnion } from "firebase/firestore";
 import { MoreVertical, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { useState } from "react";
 import type { Vendor } from "@/lib/types";
 
 export function VendorActions({ vendor }: { vendor: Vendor }) {
-    const db = useFirestore();
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
 
     const handleApprove = async () => {
         setIsLoading(true);
-        const vendorRef = doc(db, "vendors", vendor.id);
         try {
-            // Ensure both offerings and promotions are enabled upon approval for consistency
-            await updateDoc(vendorRef, {
-                subscriptionStatus: "verified",
-                updatedAt: serverTimestamp(),
-                modulesEnabled: arrayUnion("offerings", "promotions", "reviews"), // Add default modules
-            });
+            // Fetch current vendor to get existing modules
+            const { data: currentVendor, error: fetchError } = await supabase
+                .from('vendors')
+                .select('modules_enabled')
+                .eq('vendor_id', vendor.id)
+                .single();
+            
+            if (fetchError) throw fetchError;
+
+            // Merge new modules with existing ones (avoiding duplicates)
+            const existingModules = currentVendor.modules_enabled || [];
+            const newModules = ["offerings", "promotions", "reviews"];
+            const mergedModules = [...new Set([...existingModules, ...newModules])];
+
+            // Update vendor status and modules
+            const { error: updateError } = await supabase
+                .from('vendors')
+                .update({
+                    subscription_status: "verified",
+                    updated_at: new Date().toISOString(),
+                    modules_enabled: mergedModules,
+                })
+                .eq('vendor_id', vendor.id);
+            
+            if (updateError) throw updateError;
+
             toast({
                 title: "Vendor Approved",
                 description: `"${vendor.name}" is now a verified vendor.`,
@@ -50,13 +66,18 @@ export function VendorActions({ vendor }: { vendor: Vendor }) {
 
     const handleReject = async () => {
         setIsLoading(true);
-        const vendorRef = doc(db, "vendors", vendor.id);
         try {
-             await updateDoc(vendorRef, {
-                subscriptionStatus: "pending_verification", // Revert status
-                claimedBy: null, // Clear the claim
-                updatedAt: serverTimestamp(),
-            });
+            const { error } = await supabase
+                .from('vendors')
+                .update({
+                    subscription_status: "pending_verification",
+                    claimed_by: null,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('vendor_id', vendor.id);
+            
+            if (error) throw error;
+
             toast({
                 title: "Claim Rejected",
                 description: `The claim for "${vendor.name}" has been rejected.`,

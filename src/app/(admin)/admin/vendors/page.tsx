@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -11,9 +10,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
-import { useFirestore } from "@/firebase";
+import { useSupabaseCollection } from "@/lib/supabase/hooks";
+import { supabase } from "@/lib/supabase/client";
 import type { Vendor } from "@/lib/types";
 import { format } from "date-fns";
 import { VendorActions } from "./VendorActions";
@@ -23,18 +21,16 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 
 export default function VendorApprovalsPage() {
-  const db = useFirestore();
   const [searchQuery, setSearchQuery] = useState("");
 
-  const pendingClaimsQuery = useMemoFirebase(
-    () =>
-      db ? query(
-        collection(db, "vendors"),
-        where("subscriptionStatus", "==", "claimed_pending_approval")
-      ) : null,
-    [db]
+  const pendingClaimsQuery = useMemo(
+    () => () => supabase
+      .from('vendors')
+      .select('*')
+      .eq('subscription_status', 'claimed_pending_approval'),
+    []
   );
-  const { data: vendors, isLoading } = useCollection<Vendor>(pendingClaimsQuery);
+  const { data: vendors, isLoading } = useSupabaseCollection<Vendor>(pendingClaimsQuery);
 
   const filteredVendors = useMemo(() => {
     if (!vendors) return [];
@@ -111,7 +107,7 @@ export default function VendorApprovalsPage() {
                     <TableCell>
                       {vendor.updatedAt &&
                         format(
-                          (vendor.updatedAt as any).toDate(),
+                          new Date(vendor.updatedAt),
                           "dd MMM yyyy"
                         )}
                     </TableCell>

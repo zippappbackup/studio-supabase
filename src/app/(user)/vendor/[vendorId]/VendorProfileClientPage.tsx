@@ -1,19 +1,8 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
-import {
-  doc,
-  runTransaction,
-  serverTimestamp,
-  deleteDoc,
-  Timestamp,
-  arrayUnion,
-  arrayRemove,
-  getDoc,
-  updateDoc,
-  increment,
-} from 'firebase/firestore';
-import { useFirestore, useDoc, errorEmitter, FirestorePermissionError, useMemoFirebase } from '@/firebase';
+import { useSupabaseDoc } from '@/lib/supabase/hooks';
+import { supabase } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Loader2, Navigation, ArrowLeft, Star, FileText, Phone, MapPin, Globe, ChevronDown, X, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -125,7 +114,6 @@ function OfferingItem({ offering }: { offering: Offering }) {
 
 function WriteReview({ vendor, onReviewAdded, existingReview, onCancelEdit }: { vendor: Vendor, onReviewAdded: (newReview: Review) => void, existingReview?: Review, onCancelEdit?: () => void }) {
   const { user } = useAuth();
-  const db = useFirestore();
   const { toast } = useToast();
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
@@ -309,7 +297,6 @@ function WriteReview({ vendor, onReviewAdded, existingReview, onCancelEdit }: { 
 
 export function VendorProfileClientPage({ vendorId }: { vendorId: string }) {
   const router = useRouter();
-  const db = useFirestore();
   const { user } = useAuth();
   const { toast } = useToast();
   const { categories: allCategories, getVendorFromSnapshot, isVendorDataReady } = useAppCache();
@@ -319,8 +306,11 @@ export function VendorProfileClientPage({ vendorId }: { vendorId: string }) {
   const [isLoading, setIsLoading] = useState(true);
 
   // useDoc for fetching live, detailed data
-  const vendorRef = useMemoFirebase(() => (vendorId && db ? doc(db, 'vendors', vendorId) : null), [vendorId, db]);
-  const { data: liveVendor, isLoading: isLiveVendorLoading } = useDoc<Vendor>(vendorRef);
+  const vendorQuery = useMemo(
+    () => vendorId ? () => supabase.from('vendors').select('*').eq('vendor_id', vendorId).single() : () => null,
+    [vendorId]
+  );
+  const { data: liveVendor, isLoading: isLiveVendorLoading } = useSupabaseDoc<Vendor>(vendorQuery);
 
   const [editingReview, setEditingReview] = useState<Review | undefined>(undefined);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -328,8 +318,11 @@ export function VendorProfileClientPage({ vendorId }: { vendorId: string }) {
   const [deletingReviewId, setDeletingReviewId] = useState<string | null>(null);
   const [hasSubmittedReview, setHasSubmittedReview] = useState(false);
 
-  const userDocRef = useMemo(() => (user && db ? doc(db, 'users', user.uid) : null), [user, db]);
-  const { data: userData } = useDoc<ZippUser>(userDocRef);
+  const userQuery = useMemo(
+    () => user ? () => supabase.from('users').select('*').eq('uid', user.uid).single() : () => null,
+    [user]
+  );
+  const { data: userData } = useSupabaseDoc<ZippUser>(userQuery);
 
   // Effect 1: Initial load from snapshot cache.
   useEffect(() => {

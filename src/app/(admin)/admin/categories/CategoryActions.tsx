@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -10,8 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreVertical, Edit, Trash2, Loader2 } from "lucide-react";
-import { useFirestore } from "@/firebase";
-import { doc, deleteDoc } from "firebase/firestore";
+import { supabase } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Category } from "@/lib/types";
 import { CategoryEditDialog } from "./CategoryEditDialog";
@@ -19,36 +17,32 @@ import { CategoryEditDialog } from "./CategoryEditDialog";
 export function CategoryActions({ category, logMessage }: { category: Category, logMessage: (message: string) => void }) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const db = useFirestore();
   const { toast } = useToast();
 
   const handleDelete = async () => {
-    if (!db) {
-        const errorMsg = "Database not connected.";
-        toast({ title: "Error", description: errorMsg, variant: "destructive" });
-        logMessage(`Error: ${errorMsg}`);
-        return;
-    }
-      
     if (confirm(`Are you sure you want to delete the category "${category.name}"? This action cannot be undone.`)) {
       logMessage(`Attempting to delete category: "${category.name}" (ID: ${category.id})`);
       setIsDeleting(true);
       
       try {
-        const categoryRef = doc(db, "categories", category.id);
-        await deleteDoc(categoryRef);
+        const { error } = await supabase
+          .from('categories')
+          .delete()
+          .eq('id', category.id);
+        
+        if (error) throw error;
         
         const successMsg = `Category "${category.name}" has been successfully removed.`;
         toast({ title: "Category Deleted", description: successMsg, variant: "success" });
         logMessage(`Success: ${successMsg}`);
 
       } catch (error: any) {
-          const errorMessage = error.message.includes("permission-denied") 
-            ? "Permission Denied. You must be an admin to delete categories."
-            : error.message || "An unknown error occurred.";
-            
-          toast({ title: "Deletion Failed", description: errorMessage, variant: "destructive" });
-          logMessage(`Error deleting category: ${errorMessage}`);
+        const errorMessage = error.message.includes("permission") || error.message.includes("denied")
+          ? "Permission Denied. You must be an admin to delete categories."
+          : error.message || "An unknown error occurred.";
+          
+        toast({ title: "Deletion Failed", description: errorMessage, variant: "destructive" });
+        logMessage(`Error deleting category: ${errorMessage}`);
       } finally {
         setIsDeleting(false);
       }

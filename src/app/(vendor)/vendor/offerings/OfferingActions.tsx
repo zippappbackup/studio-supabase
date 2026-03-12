@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -10,12 +9,10 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreVertical, Loader2 } from "lucide-react";
-import { useFirestore, errorEmitter } from "@/firebase";
-import { doc, updateDoc, arrayRemove, arrayUnion } from "firebase/firestore";
+import { supabase } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Offering, Vendor } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
-import { FirestorePermissionError } from "@/firebase/errors";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,7 +30,6 @@ interface OfferingActionsProps {
 }
 
 export function OfferingActions({ offering, onEdit }: OfferingActionsProps) {
-  const db = useFirestore();
   const { user } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -42,17 +38,31 @@ export function OfferingActions({ offering, onEdit }: OfferingActionsProps) {
   const vendorId = user?.vendorId || user?.uid;
 
   const handleToggleActive = async () => {
-    if (!db || !vendorId) return;
+    if (!vendorId) return;
     setIsLoading(true);
-    const vendorRef = doc(db, "vendors", vendorId);
+    
     try {
-        // To update an item in an array, we must remove the old and add the new
-        await updateDoc(vendorRef, {
-            offerings: arrayRemove(offering) 
-        });
-        await updateDoc(vendorRef, {
-            offerings: arrayUnion({ ...offering, isActive: !offering.isActive })
-        });
+        // Fetch current vendor
+        const { data: vendor, error: fetchError } = await supabase
+            .from('vendors')
+            .select('offerings')
+            .eq('vendor_id', vendorId)
+            .single();
+        
+        if (fetchError) throw fetchError;
+        
+        // Update the offerings array
+        const updatedOfferings = (vendor.offerings || []).map((o: Offering) =>
+            o.id === offering.id ? { ...o, isActive: !o.isActive } : o
+        );
+        
+        // Save back to database
+        const { error: updateError } = await supabase
+            .from('vendors')
+            .update({ offerings: updatedOfferings })
+            .eq('vendor_id', vendorId);
+        
+        if (updateError) throw updateError;
         
         toast({
             title: "Status Updated",
@@ -60,9 +70,7 @@ export function OfferingActions({ offering, onEdit }: OfferingActionsProps) {
             variant: "success",
         });
     } catch (error: any) {
-        toast({ title: "Error", description: "Could not update offering status.", variant: "destructive" });
-        const permissionError = new FirestorePermissionError({ path: vendorRef.path, operation: 'update', requestResourceData: { offering } });
-        errorEmitter.emit('permission-error', permissionError);
+        toast({ title: "Error", description: error.message || "Could not update offering status.", variant: "destructive" });
     } finally {
         setIsLoading(false);
     }
@@ -73,20 +81,34 @@ export function OfferingActions({ offering, onEdit }: OfferingActionsProps) {
   };
   
   const confirmDelete = async () => {
-    if (!db || !vendorId) return;
+    if (!vendorId) return;
     
     setIsLoading(true);
-    const vendorRef = doc(db, "vendors", vendorId);
     
     try {
-        await updateDoc(vendorRef, {
-            offerings: arrayRemove(offering)
-        });
+        // Fetch current vendor
+        const { data: vendor, error: fetchError } = await supabase
+            .from('vendors')
+            .select('offerings')
+            .eq('vendor_id', vendorId)
+            .single();
+        
+        if (fetchError) throw fetchError;
+        
+        // Remove the offering from the array
+        const updatedOfferings = (vendor.offerings || []).filter((o: Offering) => o.id !== offering.id);
+        
+        // Save back to database
+        const { error: updateError } = await supabase
+            .from('vendors')
+            .update({ offerings: updatedOfferings })
+            .eq('vendor_id', vendorId);
+        
+        if (updateError) throw updateError;
+        
         toast({ title: "Offering Deleted", description: `"${offering.name}" has been removed.`, variant: "success" });
-    } catch(e: any) {
-        toast({ title: "Error", description: `Could not delete offering. Check the debug log.`, variant: "destructive" });
-        const permissionError = new FirestorePermissionError({ path: vendorRef.path, operation: 'update' }); // Deleting from array is an update op
-        errorEmitter.emit('permission-error', permissionError);
+    } catch(error: any) {
+        toast({ title: "Error", description: error.message || "Could not delete offering.", variant: "destructive" });
     } finally {
         setIsLoading(false);
         setIsConfirmOpen(false);

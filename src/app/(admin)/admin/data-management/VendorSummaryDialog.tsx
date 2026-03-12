@@ -1,7 +1,6 @@
-
 "use client";
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -12,8 +11,8 @@ import {
 import type { Vendor } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useSupabaseDoc } from '@/lib/supabase/hooks';
+import { supabase } from '@/lib/supabase/client';
 import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -26,7 +25,6 @@ interface VendorSummaryDialogProps {
 const getSafeDate = (dateInput: any): Date | null => {
     if (!dateInput) return null;
     if (dateInput instanceof Date) return dateInput;
-    if (typeof dateInput.toDate === 'function') return dateInput.toDate();
     const date = new Date(dateInput);
     if (!isNaN(date.getTime())) return date;
     return null;
@@ -86,9 +84,11 @@ const Section = ({ title, children }: { title: string; children: React.ReactNode
 );
 
 export function VendorSummaryDialog({ isOpen, setIsOpen, vendorId }: VendorSummaryDialogProps) {
-  const db = useFirestore();
-  const vendorRef = useMemoFirebase(() => (vendorId && db ? doc(db, 'vendors', vendorId) : null), [vendorId, db]);
-  const { data: vendor, isLoading } = useDoc<Vendor>(vendorRef);
+  const vendorQuery = useMemo(
+    () => vendorId ? () => supabase.from('vendors').select('*').eq('vendor_id', vendorId).single() : () => null,
+    [vendorId]
+  );
+  const { data: vendor, isLoading } = useSupabaseDoc<Vendor>(vendorQuery);
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>

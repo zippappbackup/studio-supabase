@@ -1,7 +1,13 @@
+// ============================================================================
+// MIDDLEWARE - Updated for Supabase
+// Handles security headers, bot protection, and Supabase session refresh
+// ============================================================================
+
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { updateSession } from '@/lib/supabase/middleware';
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const userAgent = request.headers.get('user-agent') || '';
 
@@ -49,9 +55,12 @@ export function middleware(request: NextRequest) {
     return new NextResponse(null, { status: 410 });
   }
 
-  // 4. STANDARD FLOW
-  const response = NextResponse.next();
-  return applySecurityHeaders(response);
+  // 4. SUPABASE SESSION REFRESH
+  // This ensures the user's auth session stays fresh and valid
+  const { response: supabaseResponse } = await updateSession(request);
+
+  // 5. APPLY SECURITY HEADERS
+  return applySecurityHeaders(supabaseResponse);
 }
 
 /**

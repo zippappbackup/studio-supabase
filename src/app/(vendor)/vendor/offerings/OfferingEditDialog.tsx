@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -21,15 +20,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/lib/auth";
-import { useFirestore, useDoc, useMemoFirebase, errorEmitter } from "@/firebase";
-import { doc, serverTimestamp, updateDoc, arrayUnion, arrayRemove, Timestamp } from "firebase/firestore";
+import { useSupabaseDoc } from '@/lib/supabase/hooks';
+import { supabase } from '@/lib/supabase/client';
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Package, HardHat } from "lucide-react";
 import type { Offering, Category, Vendor } from "@/lib/types";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { logActivity } from "@/lib/activity-logger";
 import { v4 as uuidv4 } from "uuid";
-import { FirestorePermissionError } from "@/firebase/errors";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -41,7 +39,6 @@ const countryCurrencyMap: { [key: string]: string } = {
 
 export function OfferingEditDialog({ isOpen, setIsOpen, offering }: { isOpen: boolean; setIsOpen: (isOpen: boolean) => void; offering?: Offering; }) {
   const { user } = useAuth();
-  const db = useFirestore();
   const { toast } = useToast();
 
   const [offeringData, setOfferingData] = useState<Partial<Offering>>({});
@@ -50,11 +47,18 @@ export function OfferingEditDialog({ isOpen, setIsOpen, offering }: { isOpen: bo
   const [isChanged, setIsChanged] = useState(false);
   
   const vendorId = user?.vendorId || user?.uid;
-  const vendorRef = useMemoFirebase(() => (vendorId && db ? doc(db, "vendors", vendorId) : null), [vendorId, db]);
-  const { data: vendor } = useDoc<Vendor>(vendorRef);
+  
+  const vendorQuery = useMemo(
+    () => vendorId ? () => supabase.from('vendors').select('*').eq('vendor_id', vendorId).single() : () => null,
+    [vendorId]
+  );
+  const { data: vendor } = useSupabaseDoc<Vendor>(vendorQuery);
 
-  const categoryRef = useMemoFirebase(() => vendor?.categoryId ? doc(db, "categories", vendor.categoryId) : null, [vendor, db]);
-  const { data: category } = useDoc<Category>(categoryRef);
+  const categoryQuery = useMemo(
+    () => vendor?.categoryId ? () => supabase.from('categories').select('*').eq('id', vendor.categoryId).single() : () => null,
+    [vendor?.categoryId]
+  );
+  const { data: category } = useSupabaseDoc<Category>(categoryQuery);
 
   useEffect(() => {
     if (isOpen) {
@@ -109,14 +113,14 @@ export function OfferingEditDialog({ isOpen, setIsOpen, offering }: { isOpen: bo
         return;
     }
 
-    if (!db || !vendorId || !vendorRef) {
-        toast({ title: "Error", description: "Database or vendor ID not available.", variant: "destructive" });
+    if (!vendorId) {
+        toast({ title: "Error", description: "Vendor ID not available.", variant: "destructive" });
         return;
     }
     setIsLoading(true);
 
     const isCreating = !offering;
-    const timestamp = isCreating ? new Date() : serverTimestamp();
+    const timestamp = new Date().toISOString();
     
     const finalData = {
       ...offeringData,
@@ -127,32 +131,42 @@ export function OfferingEditDialog({ isOpen, setIsOpen, offering }: { isOpen: bo
     } as Offering;
     
     try {
+        // Fetch current vendor data to get existing offerings
+        const { data: currentVendor, error: fetchError } = await supabase
+            .from('vendors')
+            .select('offerings')
+            .eq('vendor_id', vendorId)
+            .single();
+        
+        if (fetchError) throw fetchError;
+
+        let updatedOfferings: Offering[];
+        
         if (isCreating) {
-            await updateDoc(vendorRef, {
-                offerings: arrayUnion(finalData)
-            });
+            // Add new offering to array
+            updatedOfferings = [...(currentVendor.offerings || []), finalData];
         } else {
-            await updateDoc(vendorRef, {
-                offerings: arrayRemove(offering) 
-            });
-            await updateDoc(vendorRef, {
-                offerings: arrayUnion(finalData)
-            });
+            // Remove old offering and add updated one
+            const existingOfferings = currentVendor.offerings || [];
+            const filteredOfferings = existingOfferings.filter((o: Offering) => o.id !== offering.id);
+            updatedOfferings = [...filteredOfferings, finalData];
         }
 
-      logActivity(db, vendorId, isCreating ? 'offering_create' : 'offering_update', { offeringId: finalData.id, name: finalData.name });
+        // Update vendor with new offerings array
+        const { error: updateError } = await supabase
+            .from('vendors')
+            .update({ offerings: updatedOfferings })
+            .eq('vendor_id', vendorId);
+        
+        if (updateError) throw updateError;
+
+      await logActivity(supabase, vendorId, isCreating ? 'offering_create' : 'offering_update', { offeringId: finalData.id, name: finalData.name });
       toast({ title: isCreating ? "Offering Created" : "Offering Updated", description: `"${finalData.name}" has been saved.` });
       setInitialOfferingData(finalData);
       setIsOpen(false);
     } catch (e: any) {
         const errorMsg = e.message || "Failed to save offering.";
         toast({ title: "Error", description: errorMsg, variant: "destructive" });
-        const permissionError = new FirestorePermissionError({
-            path: vendorRef!.path,
-            operation: 'update',
-            requestResourceData: { offerings: arrayUnion(finalData) },
-        });
-        errorEmitter.emit('permission-error', permissionError);
     } finally {
       setIsLoading(false);
     }

@@ -1,31 +1,34 @@
-
 'use client';
 
-import { collection, serverTimestamp, doc, getDoc, Firestore } from 'firebase/firestore';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { SupabaseClient } from '@supabase/supabase-js';
 import type { ActivityType, AdminConfig } from '@/lib/types';
 
-// Store the config in memory to reduce Firestore reads
+// Store the config in memory to reduce database reads
 let logConfig: AdminConfig['activityLogConfig'] | null = null;
 let lastFetched: number | null = null;
 const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
 
 /**
  * Fetches the admin config if the cache is stale.
- * @param db The Firestore instance.
+ * @param supabase The Supabase client instance.
  */
-async function ensureConfigIsLoaded(db: Firestore) {
+async function ensureConfigIsLoaded(supabase: SupabaseClient) {
     const now = Date.now();
     if (logConfig && lastFetched && (now - lastFetched < CACHE_DURATION_MS)) {
         return;
     }
 
     try {
-        const configRef = doc(db, 'adminConfig', 'global');
-        const configSnap = await getDoc(configRef);
-        if (configSnap.exists()) {
-            const configData = configSnap.data() as AdminConfig;
-            logConfig = configData.activityLogConfig || {};
+        const { data: configData, error } = await supabase
+            .from('admin_config')
+            .select('activity_log_config')
+            .eq('id', 'global')
+            .single();
+        
+        if (error) throw error;
+        
+        if (configData) {
+            logConfig = configData.activity_log_config || {};
             lastFetched = now;
         } else {
             // If no config doc, assume all logging is off
@@ -38,27 +41,27 @@ async function ensureConfigIsLoaded(db: Firestore) {
 }
 
 /**
- * Logs a user activity to the 'userActivityLogs' collection in Firestore,
+ * Logs a user activity to the 'activity_logs' table in Supabase,
  * only if the activity type is enabled in the global admin configuration.
  *
- * @param db The Firestore instance.
+ * @param supabase The Supabase client instance.
  * @param userId The UID of the user performing the action.
  * @param activityType The type of activity being logged.
  * @param data An object containing contextual data about the event.
  */
 export async function logActivity(
-    db: Firestore,
+    supabase: SupabaseClient,
     userId: string,
     activityType: ActivityType,
     data: object = {}
 ) {
-    if (!db || !userId) {
-        console.warn("Activity Logger: Firestore or User ID not available. Skipping log.");
+    if (!supabase || !userId) {
+        console.warn("Activity Logger: Supabase client or User ID not available. Skipping log.");
         return;
     }
 
     // Ensure the latest config is loaded (from cache if possible)
-    await ensureConfigIsLoaded(db);
+    await ensureConfigIsLoaded(supabase);
 
     // Check if the specific activity type is enabled before logging
     if (!logConfig || !logConfig[activityType]) {
@@ -67,18 +70,23 @@ export async function logActivity(
 
     try {
         const logData = {
-            userId,
-            activityType,
+            user_id: userId,
+            activity_type: activityType,
             data,
-            createdAt: serverTimestamp(),
+            created_at: new Date().toISOString(),
         };
-        const logCollectionRef = collection(db, 'userActivityLogs');
-        // This is a non-blocking "fire and forget" operation
-        addDocumentNonBlocking(logCollectionRef, logData);
+        
+        // Fire and forget - don't wait for response
+        supabase
+            .from('activity_logs')
+            .insert(logData)
+            .then(({ error }) => {
+                if (error) {
+                    console.error(`Failed to log activity of type '${activityType}':`, error);
+                }
+            });
     } catch (error) {
         // Log to console for debugging, but don't let it crash the app.
         console.error(`Failed to log activity of type '${activityType}':`, error);
     }
 }
-
-    

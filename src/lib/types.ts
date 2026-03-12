@@ -1,5 +1,6 @@
-
-import type { Timestamp, GeoPoint } from "firebase/firestore";
+// Replaced Firebase types with native TypeScript types
+// Date is now used for all timestamp fields
+// GeoPoint is replaced with { latitude: number; longitude: number }
 
 export interface Address {
   line1: string;
@@ -11,7 +12,7 @@ export interface Address {
 export interface UserCollection {
   promotionId: string;
   vendorId: string;
-  collectedAt: Date | Timestamp;
+  collectedAt: Date | string;
   redemptionId: string; // Unique ID for this specific collection instance
 }
 
@@ -24,7 +25,7 @@ export interface ZippUser {
   address: Address;
   role: "user" | "vendor" | "admin";
   region?: string; 
-  location?: GeoPoint;
+  location?: { latitude: number; longitude: number }; // Replaced GeoPoint
   dob?: string;
   gender?: "male" | "female" | "other" | "prefer_not_to_say";
   profession?: string;
@@ -32,8 +33,8 @@ export interface ZippUser {
   collectedPromotions?: UserCollection[];
   redeemedPromotions?: string[]; // Array of unique promotionId
   uncollectedPromotions?: string[];
-  createdAt: Date | Timestamp;
-  updatedAt: Date | Timestamp;
+  createdAt: Date | string;
+  updatedAt: Date | string;
   vendorId?: string; 
 }
 
@@ -65,11 +66,11 @@ export interface Vendor {
   modulesEnabled: string[];
   subscriptionStatus: "pending_verification" | "trial" | "free" | "paid" | "pay-as-you-go" | "claimed_pending_approval" | "suspended" | "verified";
   profileViews?: number;
-  createdAt: Date | Timestamp;
-  updatedAt: Date | Timestamp;
+  createdAt: Date | string;
+  updatedAt: Date | string;
   distance?: number;
   claimedBy?: string;
-  trialStartedAt?: Date | Timestamp;
+  trialStartedAt?: Date | string;
   offerings: Offering[]; // Offerings are nested
   reviews: Review[]; // Reviews are now nested
   promotions: Promotion[];
@@ -78,7 +79,7 @@ export interface Vendor {
   photos?: (string | GooglePhoto)[];
   priceLevel?: number;
   types?: string[];
-  googleLastSyncedAt?: Date | Timestamp;
+  googleLastSyncedAt?: Date | string;
   dedupeConfidence?: number;
   googleSyncLocked?: boolean;
 }
@@ -106,8 +107,8 @@ export interface Offering {
     sku?: string;
     images?: string[];
     customFields?: { [key: string]: any };
-    createdAt: Date | Timestamp;
-    updatedAt: Date | Timestamp;
+    createdAt: Date | string;
+    updatedAt: Date | string;
 }
 
 export interface Review {
@@ -118,8 +119,8 @@ export interface Review {
     userAvatar?: string;
     rating: number; 
     text: string;
-    createdAt: Date | Timestamp;
-    updatedAt: Date | Timestamp;
+    createdAt: Date | string;
+    updatedAt: Date | string;
     author_name?: string; // From Google
     time?: number; // From Google
 }
@@ -131,7 +132,7 @@ export interface Feedback {
     email: string;
     subject: string;
     message: string;
-    createdAt: Date | Timestamp;
+    createdAt: Date | string;
 }
 
 export interface Category {
@@ -143,8 +144,8 @@ export interface Category {
   modulesAvailable: string[];
   defaultModules: string[];
   fieldsSchema: FieldSchema[];
-  createdAt: Date | Timestamp;
-  updatedAt: Date | Timestamp;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
 export interface FieldSchema {
@@ -161,8 +162,8 @@ export interface RedemptionEvent {
     redemptionId: string; // Unique ID for this specific event
     userId: string;
     status: 'collected' | 'redeemed';
-    collectedAt: Date | Timestamp;
-    redeemedAt?: Date | Timestamp;
+    collectedAt: Date | string;
+    redeemedAt?: Date | string;
 }
 
 export interface Promotion {
@@ -172,15 +173,15 @@ export interface Promotion {
   title: string;
   description?: string;
   imageUrl?: string;
-  startAt: Date | Timestamp;
-  endAt: Date | Timestamp;
+  startAt: Date | string;
+  endAt: Date | string;
   terms?: string;
   redemptionType: "qr" | "code" | "in-store";
   quota?: number;
   redemptions?: RedemptionEvent[];
-  createdAt: Date | Timestamp;
+  createdAt: Date | string;
   createdBy: string;
-  updatedAt: Date | Timestamp;
+  updatedAt: Date | string;
 }
 
 export interface Order {
@@ -192,8 +193,8 @@ export interface Order {
     currency: string;
     status: "pending" | "ready_for_pickup" | "collected" | "cancelled";
     pickupCode: string;
-    createdAt: Date | Timestamp;
-    updatedAt: Date | Timestamp;
+    createdAt: Date | string;
+    updatedAt: Date | string;
 }
 
 export interface Booking {
@@ -201,11 +202,11 @@ export interface Booking {
     userId: string;
     vendorId: string;
     service: { id: string, name: string, price: number, durationMinutes: number };
-    dateTime: Date | Timestamp;
+    dateTime: Date | string;
     status: "pending" | "confirmed" | "in_progress" | "completed" | "cancelled";
     notes?: string;
-    createdAt: Date | Timestamp;
-    updatedAt: Date | Timestamp;
+    createdAt: Date | string;
+    updatedAt: Date | string;
 }
 
 export type ActivityLogConfig = {
@@ -289,7 +290,7 @@ export interface ScrapeCache {
   region: string;
   source: string;
   storagePath: string; // Changed from apiResponse to storagePath
-  createdAt: Timestamp;
-  expiresAt: Timestamp;
+  createdAt: string; // Changed from Timestamp
+  expiresAt: string; // Changed from Timestamp
   notes?: string;
 }

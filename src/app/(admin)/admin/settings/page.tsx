@@ -1,16 +1,13 @@
-
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
-import { doc, serverTimestamp } from "firebase/firestore";
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { useSupabaseDoc } from "@/lib/supabase/hooks";
+import { supabase } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Loader2, Info, BrainCircuit } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -19,11 +16,13 @@ import { Separator } from "@/components/ui/separator";
 
 
 export default function SettingsPage() {
-  const db = useFirestore();
   const { toast } = useToast();
 
-  const configRef = useMemoFirebase(() => db ? doc(db, "adminConfig", "global") : null, [db]);
-  const { data: configData, isLoading: isConfigLoading } = useDoc<AdminConfig>(configRef);
+  const configQuery = useMemo(
+    () => () => supabase.from('admin_config').select('*').eq('config_id', 'global').single(),
+    []
+  );
+  const { data: configData, isLoading: isConfigLoading } = useSupabaseDoc<AdminConfig>(configQuery);
   
   const [apiKeySecret, setApiKeySecret] = useState("");
   const [stripeSecret, setStripeSecret] = useState("");
@@ -48,34 +47,44 @@ export default function SettingsPage() {
   }, [configData]);
 
   const handleApiSave = async () => {
-    if (!db) return;
     setIsSavingApi(true);
     const dataToSave = {
-        googlePlacesApiKeyName: apiKeySecret,
-        stripeSecretKeyName: stripeSecret,
-        updatedAt: serverTimestamp(),
+        google_places_api_key_name: apiKeySecret,
+        stripe_secret_key_name: stripeSecret,
+        updated_at: new Date().toISOString(),
     };
     
-    const globalConfigRef = doc(db, "adminConfig", "global");
-    setDocumentNonBlocking(globalConfigRef, dataToSave, { merge: true });
-    toast({ title: "API Settings Saved", description: "Secret names have been updated.", variant: "success" });
+    const { error } = await supabase
+      .from('admin_config')
+      .upsert({ config_id: 'global', ...dataToSave });
+    
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "API Settings Saved", description: "Secret names have been updated.", variant: "success" });
+    }
     setIsSavingApi(false);
   };
   
   const handleTtlSave = async () => {
-    if (!db) return;
     setIsSavingTtl(true);
     const dataToSave = {
-        cacheTTLs: {
+        cache_ttls: {
             googlePlacesDays: Number(googleTtl),
             serperDays: Number(serperTtl),
         },
-        updatedAt: serverTimestamp(),
+        updated_at: new Date().toISOString(),
     };
      
-    const globalConfigRef = doc(db, "adminConfig", "global");
-    setDocumentNonBlocking(globalConfigRef, dataToSave, { merge: true });
-    toast({ title: "Cache TTLs Saved", description: "Cache durations have been updated.", variant: "success" });
+    const { error } = await supabase
+      .from('admin_config')
+      .upsert({ config_id: 'global', ...dataToSave });
+    
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Cache TTLs Saved", description: "Cache durations have been updated.", variant: "success" });
+    }
     setIsSavingTtl(false);
   };
 
@@ -84,12 +93,21 @@ export default function SettingsPage() {
   };
 
   const handleLogSave = async () => {
-    if (!db) return;
     setIsSavingLogs(true);
-    const dataToSave = { activityLogConfig, updatedAt: serverTimestamp() };
-    const globalConfigRef = doc(db, "adminConfig", "global");
-    setDocumentNonBlocking(globalConfigRef, dataToSave, { merge: true });
-    toast({ title: "Activity Log Settings Saved", description: "Your logging preferences have been updated.", variant: "success" });
+    const dataToSave = { 
+      activity_log_config: activityLogConfig, 
+      updated_at: new Date().toISOString() 
+    };
+    
+    const { error } = await supabase
+      .from('admin_config')
+      .upsert({ config_id: 'global', ...dataToSave });
+    
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Activity Log Settings Saved", description: "Your logging preferences have been updated.", variant: "success" });
+    }
     setIsSavingLogs(false);
   };
 
@@ -117,7 +135,7 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle>Activity Log Settings</CardTitle>
           <CardDescription>
-            Control which user and vendor activities are logged to Firestore to manage database writes and costs.
+            Control which user and vendor activities are logged to the database to manage writes and costs.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

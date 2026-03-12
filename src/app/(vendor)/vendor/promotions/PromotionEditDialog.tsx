@@ -16,8 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useFirestore, errorEmitter } from "@/firebase";
-import { doc, serverTimestamp, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
+import { supabase } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, CalendarIcon } from "lucide-react";
 import type { Promotion } from "@/lib/types";
@@ -28,7 +27,6 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FirestorePermissionError } from "@/firebase/errors";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ImageUploader } from "@/components/core/ImageUploader";
@@ -56,7 +54,6 @@ interface PromotionEditDialogProps {
 
 export function PromotionEditDialog({ isOpen, setIsOpen, promotion }: PromotionEditDialogProps) {
   const { user } = useAuth();
-  const db = useFirestore();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -73,8 +70,8 @@ export function PromotionEditDialog({ isOpen, setIsOpen, promotion }: PromotionE
       if (promotion) {
         reset({
           ...promotion,
-          startAt: (promotion.startAt as any).toDate(),
-          endAt: (promotion.endAt as any).toDate(),
+          startAt: new Date(promotion.startAt),
+          endAt: new Date(promotion.endAt),
         });
       } else {
         reset({
@@ -91,14 +88,12 @@ export function PromotionEditDialog({ isOpen, setIsOpen, promotion }: PromotionE
   }, [promotion, isOpen, reset]);
 
   const onSubmit = async (data: PromotionFormData) => {
-    if (!db || !user) {
+    if (!user) {
         toast({ title: "Error", description: "You must be logged in.", variant: "destructive" });
         return;
     }
     const vendorId = user.vendorId || user.uid;
     setIsLoading(true);
-
-    const vendorRef = doc(db, "vendors", vendorId);
     
     const finalData: Omit<Promotion, 'redemptionType'> & { redemptionType?: string } = {
         ...data,
@@ -113,30 +108,39 @@ export function PromotionEditDialog({ isOpen, setIsOpen, promotion }: PromotionE
     }
 
     try {
+        // Fetch current vendor data to get existing promotions
+        const { data: currentVendor, error: fetchError } = await supabase
+            .from('vendors')
+            .select('promotions')
+            .eq('vendor_id', vendorId)
+            .single();
+        
+        if (fetchError) throw fetchError;
+
+        let updatedPromotions: Promotion[];
+        
         if (isEditing) {
-            const oldPromoObject = { ...promotion, createdAt: (promotion!.createdAt as any).toDate(), updatedAt: (promotion!.updatedAt as any).toDate() };
-            await updateDoc(vendorRef, {
-                promotions: arrayRemove(oldPromoObject)
-            });
-            await updateDoc(vendorRef, {
-                promotions: arrayUnion(finalData)
-            });
+            // Remove old promotion and add updated one
+            const existingPromotions = currentVendor.promotions || [];
+            const filteredPromotions = existingPromotions.filter((p: Promotion) => p.id !== promotion!.id);
+            updatedPromotions = [...filteredPromotions, finalData];
         } else {
-             await updateDoc(vendorRef, {
-                promotions: arrayUnion(finalData)
-            });
+            // Add new promotion to array
+            updatedPromotions = [...(currentVendor.promotions || []), finalData];
         }
+
+        // Update vendor with new promotions array
+        const { error: updateError } = await supabase
+            .from('vendors')
+            .update({ promotions: updatedPromotions })
+            .eq('vendor_id', vendorId);
+        
+        if (updateError) throw updateError;
         
         toast({ title: promotion ? "Promotion Updated" : "Promotion Created", description: `"${data.title}" has been saved.`, variant: "success" });
         setIsOpen(false);
     } catch(e: any) {
         toast({ title: "Error", description: e.message, variant: "destructive" });
-        const permissionError = new FirestorePermissionError({
-            path: vendorRef.path,
-            operation: 'update',
-            requestResourceData: { promotions: arrayUnion(finalData) },
-        });
-        errorEmitter.emit('permission-error', permissionError);
     } finally {
         setIsLoading(false);
     }

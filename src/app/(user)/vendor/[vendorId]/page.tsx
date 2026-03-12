@@ -1,7 +1,6 @@
 import { VendorProfileClientPage } from "./VendorProfileClientPage";
 import { VendorProfileErrorBoundary } from "./VendorProfileErrorBoundary";
-import { getDoc, doc } from "firebase/firestore";
-import { getAdminApp } from "@/lib/firebase-admin";
+import { createClient } from '@supabase/supabase-js';
 import type { Metadata } from "next";
 import type { Vendor } from "@/lib/types";
 
@@ -10,13 +9,21 @@ export async function generateMetadata({ params }: { params: { vendorId: string 
   const { vendorId } = params;
   
   try {
-    // We must use the admin SDK here because this runs on the server during the build process.
-    const db = getAdminApp().firestore();
-    const vendorRef = doc(db, "vendors", vendorId);
-    const vendorSnap = await getDoc(vendorRef);
+    // Create a server-side Supabase client for metadata generation
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    
+    const { data: vendor, error } = await supabase
+      .from('vendors')
+      .select('*')
+      .eq('vendor_id', vendorId)
+      .single();
 
-    if (vendorSnap.exists()) {
-      const vendor = vendorSnap.data() as Vendor;
+    if (error) throw error;
+
+    if (vendor) {
       const title = `${vendor.name} - Zipp Super App`;
       const description = vendor.description 
         ? vendor.description.substring(0, 160) 

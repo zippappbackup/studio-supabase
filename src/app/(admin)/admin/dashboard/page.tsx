@@ -1,10 +1,9 @@
-
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart, Users, AlertTriangle, CheckCircle, Loader2 } from "lucide-react";
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
+import { useSupabaseCollection } from "@/lib/supabase/hooks";
+import { supabase } from "@/lib/supabase/client";
 import type { Vendor, Promotion, ScrapeCache, ZippUser } from "@/lib/types";
 import { useAppCache } from "@/context/AppCacheProvider";
 import { useMemo } from "react";
@@ -32,15 +31,8 @@ function KPICard({ title, value, icon: Icon, isLoading, footerText }: { title: s
 
 const getSafeDate = (dateInput: any): Date | null => {
     if (!dateInput) return null;
-    // Firestore Timestamp object
-    if (typeof dateInput.toDate === 'function') {
-        return dateInput.toDate();
-    }
-    // Plain object from Cloud Function serialization
-    if (typeof dateInput === 'object' && dateInput !== null && typeof (dateInput as any)._seconds === 'number') {
-        return new Date((dateInput as any)._seconds * 1000);
-    }
-    // String or number that can be parsed
+    
+    // ISO string or timestamp
     const date = new Date(dateInput);
     if (!isNaN(date.getTime())) {
         return date;
@@ -50,27 +42,32 @@ const getSafeDate = (dateInput: any): Date | null => {
 
 
 export default function AdminDashboard() {
-  const db = useFirestore();
   const { vendorDataset, isVendorDataReady } = useAppCache();
 
   // --- Live Queries for Real-time Data ---
-  const allVendorsQuery = useMemoFirebase(() => db ? query(collection(db, "vendors")) : null, [db]);
-  const { data: allVendors, isLoading: isLoadingAllVendors } = useCollection<Vendor>(allVendorsQuery, { source: 'server' });
-
-  const allUsersQuery = useMemoFirebase(() => db ? query(collection(db, "users")) : null, [db]);
-  const { data: allUsers, isLoading: isLoadingAllUsers } = useCollection<ZippUser>(allUsersQuery, { source: 'server' });
-
-  const pendingClaimsQuery = useMemoFirebase(
-    () => db ? query(collection(db, "vendors"), where("subscriptionStatus", "==", "claimed_pending_approval")) : null,
-    [db]
+  const allVendorsQuery = useMemo(
+    () => () => supabase.from('vendors').select('*'),
+    []
   );
-  const { data: pendingClaims, isLoading: isLoadingPending } = useCollection<Vendor>(pendingClaimsQuery);
+  const { data: allVendors, isLoading: isLoadingAllVendors } = useSupabaseCollection<Vendor>(allVendorsQuery);
+
+  const allUsersQuery = useMemo(
+    () => () => supabase.from('users').select('*'),
+    []
+  );
+  const { data: allUsers, isLoading: isLoadingAllUsers } = useSupabaseCollection<ZippUser>(allUsersQuery);
+
+  const pendingClaimsQuery = useMemo(
+    () => () => supabase.from('vendors').select('*').eq('subscription_status', 'claimed_pending_approval'),
+    []
+  );
+  const { data: pendingClaims, isLoading: isLoadingPending } = useSupabaseCollection<Vendor>(pendingClaimsQuery);
   
-  const unclaimedVendorsQuery = useMemoFirebase(
-    () => db ? query(collection(db, "vendors"), where("subscriptionStatus", "==", "pending_verification")) : null,
-    [db]
+  const unclaimedVendorsQuery = useMemo(
+    () => () => supabase.from('vendors').select('*').eq('subscription_status', 'pending_verification'),
+    []
   );
-  const { data: unclaimedVendors, isLoading: isLoadingUnclaimed } = useCollection<Vendor>(unclaimedVendorsQuery);
+  const { data: unclaimedVendors, isLoading: isLoadingUnclaimed } = useSupabaseCollection<Vendor>(unclaimedVendorsQuery);
 
 
   // --- Derived Data from Snapshot for Efficiency ---

@@ -1,9 +1,8 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { useSupabaseCollection } from '@/lib/supabase/hooks';
+import { supabase } from '@/lib/supabase/client';
 import type { Feedback } from '@/lib/types';
 import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -13,9 +12,11 @@ import { FeedbackActions } from './FeedbackActions';
 import { FeedbackSummaryDialog } from './FeedbackSummaryDialog';
 
 export default function FeedbackPage() {
-  const db = useFirestore();
-  const feedbackQuery = useMemoFirebase(() => db ? query(collection(db, "feedback"), orderBy("createdAt", "desc")) : null, [db]);
-  const { data: feedbackItems, isLoading } = useCollection<Feedback>(feedbackQuery);
+  const feedbackQuery = useMemo(
+    () => () => supabase.from('feedback').select('*').order('created_at', { ascending: false }),
+    []
+  );
+  const { data: feedbackItems, isLoading } = useSupabaseCollection<Feedback>(feedbackQuery);
 
   const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
@@ -72,7 +73,7 @@ export default function FeedbackPage() {
                 {!isLoading && feedbackItems?.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell>
-                      {item.createdAt && format((item.createdAt as any).toDate(), "dd MMM yyyy, hh:mm a")}
+                      {item.createdAt && format(new Date(item.createdAt), "dd MMM yyyy, hh:mm a")}
                     </TableCell>
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell>{item.subject}</TableCell>
@@ -98,4 +99,3 @@ export default function FeedbackPage() {
     </>
   );
 }
-

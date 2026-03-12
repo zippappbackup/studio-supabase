@@ -1,8 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Lato } from "next/font/google";
 import "@/app/globals.css";
-import { AuthProvider } from "@/lib/auth";
-import { FirebaseClientProvider } from "@/firebase/client-provider";
+import { SupabaseProvider } from "@/lib/supabase/provider";
 import { Toaster } from "@/components/ui/toaster";
 import { AppCacheProvider } from "@/context/AppCacheProvider";
 import { cn } from "@/lib/utils";
@@ -61,15 +60,13 @@ export default function RootLayout({
           Next.js automatically injects them using the 'metadata' object above.
       */}
       <body className={cn("relative", "fog-background")} style={fogStyle}>
-        <FirebaseClientProvider>
-          <AuthProvider>
-            <AppCacheProvider>
-              <div className="relative z-10">{children}</div>
-              <InstallPwaPrompt />
-            </AppCacheProvider>
-            <Toaster />
-          </AuthProvider>
-        </FirebaseClientProvider>
+        <SupabaseProvider>
+          <AppCacheProvider>
+            <div className="relative z-10">{children}</div>
+            <InstallPwaPrompt />
+          </AppCacheProvider>
+          <Toaster />
+        </SupabaseProvider>
       </body>
     </html>
   );

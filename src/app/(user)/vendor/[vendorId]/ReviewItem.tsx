@@ -1,11 +1,9 @@
-
 'use client';
 
 import type { Review } from "@/lib/types";
 import { MoreVertical, Pencil, Star, Trash, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
-import type { Timestamp } from "firebase/firestore";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,12 +31,8 @@ export function ReviewItem({
     if (review.time) {
       return new Date(review.time * 1000);
     }
-    // Firestore timestamp
+    // Supabase/ISO timestamp
     if (review.createdAt) {
-      if (typeof (review.createdAt as any).toDate === 'function') {
-        return (review.createdAt as Timestamp).toDate();
-      }
-      // Handle serialized timestamp
       const date = new Date(review.createdAt as any);
       if (!isNaN(date.getTime())) {
         return date;

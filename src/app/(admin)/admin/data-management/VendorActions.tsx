@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -10,8 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Edit, MoreVertical, Trash2, FileText, Loader2 } from "lucide-react";
-import { useFirestore } from "@/firebase";
-import { doc, deleteDoc } from "firebase/firestore";
+import { supabase } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Vendor } from "@/lib/types";
 import {
@@ -32,7 +30,6 @@ interface VendorActionsProps {
 }
 
 export function VendorActions({ vendor, onEdit, onViewSummary }: VendorActionsProps) {
-  const db = useFirestore();
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -45,16 +42,16 @@ export function VendorActions({ vendor, onEdit, onViewSummary }: VendorActionsPr
     setIsDeleting(true);
     setIsConfirmOpen(false);
     try {
-      if (!db) {
-        throw new Error("Firestore not available");
-      }
-      const docRef = doc(db, "vendors", vendor.id);
+      const { error } = await supabase
+        .from('vendors')
+        .delete()
+        .eq('vendor_id', vendor.id);
       
-      await deleteDoc(docRef);
+      if (error) throw error;
 
       toast({ title: "Vendor Deleted", description: `"${vendor.name}" has been removed.`, variant: "destructive" });
     } catch (error: any) {
-      toast({ title: "Error", description: `Failed to delete vendor: ${error.message}`, variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Failed to delete vendor.", variant: "destructive" });
     } finally {
       setIsDeleting(false);
     }
