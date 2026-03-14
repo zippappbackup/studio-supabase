@@ -656,6 +656,7 @@ export function AuthForm({ type, vendorToClaim: vendorProp }: { type: "login" | 
       </div>
     );
 
+  }
 
   // SIGNUP FORM
   const countryOptions: ComboboxOption[] = countries.map((country) => ({
