@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Lato } from "next/font/google";
 import "@/app/globals.css";
 import { SupabaseProvider } from "@/lib/supabase/provider";
+import { AuthProvider } from "@/lib/auth";
 import { Toaster } from "@/components/ui/toaster";
 import { AppCacheProvider } from "@/context/AppCacheProvider";
 import { cn } from "@/lib/utils";
@@ -61,10 +62,12 @@ export default function RootLayout({
       */}
       <body className={cn("relative", "fog-background")} style={fogStyle}>
         <SupabaseProvider>
+          <AuthProvider>
           <AppCacheProvider>
             <div className="relative z-10">{children}</div>
             <InstallPwaPrompt />
           </AppCacheProvider>
+          </AuthProvider>
           <Toaster />
         </SupabaseProvider>
       </body>
