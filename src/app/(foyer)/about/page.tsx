@@ -51,7 +51,7 @@ export default function AboutPage() {
           </section>
 
           <section>
-            <Image
+            <Image unoptimized unoptimized
               src="/Images/Zipp About Page img 1.png"
               alt="About Zipp"
               width={800}
@@ -76,7 +76,7 @@ export default function AboutPage() {
             <div className="grid grid-cols-1 gap-8 text-left md:grid-cols-3">
               <Card>
                 <CardContent className="p-4 flex items-start gap-4">
-                  <Image
+                  <Image unoptimized unoptimized
                     src="/Images/Zipp About Page img 2.png"
                     alt="Trust & Transparency"
                     width={72}
@@ -93,7 +93,7 @@ export default function AboutPage() {
               </Card>
               <Card>
                 <CardContent className="p-4 flex items-start gap-4">
-                   <Image
+                   <Image unoptimized unoptimized
                     src="/Images/Zipp About Page img 3.png"
                     alt="Community First"
                     width={72}
@@ -110,7 +110,7 @@ export default function AboutPage() {
               </Card>
               <Card>
                 <CardContent className="p-4 flex items-start gap-4">
-                   <Image
+                   <Image unoptimized unoptimized
                     src="/Images/Zipp About Page img 4.png"
                     alt="Simplicity in Design"
                     width={72}
@@ -137,7 +137,7 @@ export default function AboutPage() {
             <p className="text-muted-foreground max-w-2xl mx-auto text-center">Follow us to see what our community is saying, get the latest updates on new features, and stay connected with the Zipp team!</p>
             <div className="flex justify-center gap-6 pt-2">
               <Link href="https://www.facebook.com/share/1Ah9cGwFNy/" target="_blank" rel="noopener noreferrer" className="bg-black rounded-md p-1.5">
-                <Image
+                <Image unoptimized unoptimized
                   src="/icons/facebook.svg"
                   alt="Facebook"
                   width={28}
@@ -146,7 +146,7 @@ export default function AboutPage() {
                 />
               </Link>
               <Link href="https://www.tiktok.com/@zippsg?_r=1&_t=ZS-92uxz5bHYVY" target="_blank" rel="noopener noreferrer" className="bg-black rounded-md p-1.5">
-                <Image
+                <Image unoptimized unoptimized
                   src="/icons/tiktok.svg"
                   alt="TikTok"
                   width={28}
