@@ -51,7 +51,7 @@ export default function AboutPage() {
 
           <section>
             <img
-              src="/Images/Zipp About Page img 1.png"
+              src="/Images/zipp-about-page-img-1.png"
               alt="About Zipp"
               width={800}
               height={400}
@@ -76,7 +76,7 @@ export default function AboutPage() {
               <Card>
                 <CardContent className="p-4 flex items-start gap-4">
                   <img
-                    src="/Images/Zipp About Page img 2.png"
+                    src="/Images/zipp-about-page-img-2.png"
                     alt="Trust & Transparency"
                     width={72}
                     height={72}
@@ -93,7 +93,7 @@ export default function AboutPage() {
               <Card>
                 <CardContent className="p-4 flex items-start gap-4">
                    <img
-                    src="/Images/Zipp About Page img 3.png"
+                    src="/Images/zipp-about-page-img-3.png"
                     alt="Community First"
                     width={72}
                     height={72}
@@ -110,7 +110,7 @@ export default function AboutPage() {
               <Card>
                 <CardContent className="p-4 flex items-start gap-4">
                    <img
-                    src="/Images/Zipp About Page img 4.png"
+                    src="/Images/zipp-about-page-img-4.png"
                     alt="Simplicity in Design"
                     width={72}
                     height={72}
