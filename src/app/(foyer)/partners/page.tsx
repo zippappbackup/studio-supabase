@@ -38,7 +38,7 @@ export default function ForVendorsPage() {
 
       <section className="pt-0">
         <Image
-          src="/Images/Zipp Partner Page img 1.png"
+          src="/Images/zipp-partner-page-img-1.png"
           alt="Happy business owner"
           width={800}
           height={400}
@@ -96,7 +96,7 @@ export default function ForVendorsPage() {
         <Card>
             <CardContent className="p-4 flex items-start gap-4">
               <Image
-                src="/Images/Zipp Partner Page img 2.png"
+                src="/Images/zipp-partner-page-img-2.png"
                 alt="Find Your Business"
                 width={72}
                 height={72}
@@ -113,7 +113,7 @@ export default function ForVendorsPage() {
           <Card>
             <CardContent className="p-4 flex items-start gap-4">
               <Image
-                src="/Images/Zipp Partner Page img 3.png"
+                src="/Images/zipp-partner-page-img-3.png"
                 alt="Claim & Verify"
                 width={72}
                 height={72}
@@ -130,7 +130,7 @@ export default function ForVendorsPage() {
           <Card>
             <CardContent className="p-4 flex items-start gap-4">
               <Image
-                src="/Images/Zipp Partner Page img 4.png"
+                src="/Images/zipp-partner-page-img-4.png"
                 alt="Complete Your Profile"
                 width={72}
                 height={72}

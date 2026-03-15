@@ -19,7 +19,7 @@ export default function WelcomePage() {
         </p>
         <div className="pt-4 max-w-xl mx-auto">
             <Image
-                src="/Images/Zipp Welcome Page img 1.png"
+                src="/Images/zipp-welcome-page-img-1.png"
                 alt="Trusted home services professional"
                 width={307.2}
                 height={204.8}
@@ -87,7 +87,7 @@ export default function WelcomePage() {
           <Card>
             <CardContent className="p-4 flex items-start gap-4">
               <Image
-                src="/Images/Zipp Welcome Page img 2.png"
+                src="/Images/zipp-welcome-page-img-2.png"
                 alt="Search for services"
                 width={72}
                 height={72}
@@ -102,7 +102,7 @@ export default function WelcomePage() {
           <Card>
             <CardContent className="p-4 flex items-start gap-4">
               <Image
-                src="/Images/Zipp Welcome Page img 3.png"
+                src="/Images/zipp-welcome-page-img-3.png"
                 alt="Compare vendors"
                 width={72}
                 height={72}
@@ -117,7 +117,7 @@ export default function WelcomePage() {
           <Card>
             <CardContent className="p-4 flex items-start gap-4">
               <Image
-                src="/Images/Zipp Welcome Page img 4.png"
+                src="/Images/zipp-welcome-page-img-4.png"
                 alt="Contact provider"
                 width={72}
                 height={72}
