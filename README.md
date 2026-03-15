@@ -55,3 +55,4 @@ A powerful administrative backend for managing the entire Zipp ecosystem.
 *   **Category Management**: Full control to create, edit, and delete the service categories that structure the entire app (e.g., Handyman Services). This includes defining which modules (like Bookings or Promotions) are available to vendors in that category.
 *   **Global Settings**: A configuration panel to manage system-wide settings, including API keys stored in Google Secret Manager, cache durations, and fine-grained control over which user activities get logged for analytics.
 *   **Photo Migration Tool**: A utility to fix broken image links by migrating photos from temporary Google Places URLs to permanent Firebase Storage, ensuring images don't disappear.# Cloudflare deployment
+# Deployment trigger
