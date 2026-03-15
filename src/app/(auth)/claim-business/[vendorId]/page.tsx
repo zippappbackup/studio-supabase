@@ -1,4 +1,5 @@
 
+export const runtime = 'edge';
 import ClaimBusinessClientPage from './ClaimBusinessClientPage';
 
 // This is the server component wrapper for the claim business page.

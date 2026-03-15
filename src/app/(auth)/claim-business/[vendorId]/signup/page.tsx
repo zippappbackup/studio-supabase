@@ -1,4 +1,5 @@
 'use client';
+export const runtime = 'edge';
 
 import { AuthFormWrapper } from "@/components/auth/AuthFormWrapper";
 import { supabase } from "@/lib/supabase/client";
