@@ -27,7 +27,7 @@ export default function FoyerLayout({
     <div
       className="flex min-h-screen w-full flex-col items-center"
     >
-        <header className="w-full max-w-5xl px-4 py-2 relative z-10 flex items-center justify-between">
+        <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 w-full max-w-5xl px-4 py-2 relative z-10 flex items-center justify-between">
             <Logo />
             <div className="flex items-center gap-2 sm:gap-4">
               <Button asChild size="sm">
