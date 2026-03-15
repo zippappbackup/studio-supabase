@@ -25,7 +25,7 @@ export default function FoyerLayout({
   return (
     <div className="flex min-h-screen w-full flex-col items-center">
         {/* Fixed Header */}
-        <header className="fixed top-0 left-0 right-0 z-50 bg-[var(--fog-base)] border-b border-border/40">
+        <header className="fixed top-0 left-0 right-0 z-50 bg-transparent">
             <div className="w-full max-w-5xl mx-auto px-4 py-2 flex items-center justify-between">
                 <Logo />
                 <div className="flex items-center gap-2 sm:gap-4">
