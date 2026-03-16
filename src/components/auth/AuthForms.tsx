@@ -69,7 +69,7 @@ function PrivacyPolicyDialog({ isOpen, onOpenChange, onAgree }: PrivacyPolicyDia
   );
 }
 
-export function AuthForm() {
+export function AuthForm({ type, vendorToClaim }: { type: 'login' | 'signup', vendorToClaim?: Vendor }) {
   const [isLoading, setIsLoading] = useState(false);
   const [showMainSignupForm, setShowMainSignupForm] = useState(false);
   const [isPrivacyAgreed, setIsPrivacyAgreed] = useState(false);
