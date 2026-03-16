@@ -23,9 +23,9 @@ export default function FoyerLayout({
   ];
 
   return (
-    <div className="flex min-h-screen w-full flex-col items-center">
-        {/* STICKY TRANSPARENT HEADER */}
-        <header className="sticky top-0 z-50 w-full bg-transparent flex-shrink-0">
+    <div className="flex flex-col w-full h-screen overflow-hidden items-center">
+        {/* HEADER — fixed height, doesn't scroll */}
+        <header className="w-full flex-shrink-0">
             <div className="w-full max-w-5xl mx-auto px-4 py-2 flex items-center justify-between">
                 <Logo />
                 <div className="flex items-center gap-2 sm:gap-4">
@@ -46,20 +46,22 @@ export default function FoyerLayout({
             </div>
         </header>
         
-        {/* CONTENT */}
-        <main className="w-full max-w-4xl p-6 relative z-10">
-            <div className="w-full space-y-2 text-center">
-                {children}
+        {/* SCROLLABLE CONTENT — only this scrolls */}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden w-full relative">
+            <div className="w-full max-w-4xl mx-auto p-6">
+                <div className="w-full space-y-2 text-center">
+                    {children}
+                </div>
             </div>
+            
+            {/* FOOTER — inside scrollable area */}
+            <footer className="w-full max-w-4xl mx-auto px-6 pb-4 pt-2">
+                <Separator style={{ backgroundColor: 'hsl(212, 71%, 85.3%)' }} className="mb-4" />
+                <p className="mt-4 text-center text-xs text-muted-foreground">
+                  © {new Date().getFullYear()} Zipp Super App. All Rights Reserved.
+                </p>
+            </footer>
         </main>
-        
-        {/* FOOTER */}
-        <footer className="w-full max-w-4xl px-6 pb-4 pt-2 relative z-10">
-            <Separator style={{ backgroundColor: 'hsl(212, 71%, 85.3%)' }} className="mb-4" />
-            <p className="mt-4 text-center text-xs text-muted-foreground">
-              © {new Date().getFullYear()} Zipp Super App. All Rights Reserved.
-            </p>
-        </footer>
     </div>
   );
 }
