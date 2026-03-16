@@ -75,7 +75,7 @@ export function AuthForm({ type, vendorToClaim }: { type: 'login' | 'signup', ve
   const [isPrivacyAgreed, setIsPrivacyAgreed] = useState(false);
   const [isPrivacyDialogOpen, setIsPrivacyDialogOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [vendorToClaim, setVendorToClaim] = useState<Vendor | null>(null);
+  const [internalVendor, setInternalVendor] = useState<Vendor | null>(null);
   
   const { signUp } = useAuth();
   const { toast } = useToast();
