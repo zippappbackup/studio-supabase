@@ -35,9 +35,9 @@ export default function AuthLayout({
             </div>
             <div className="w-full max-w-4xl mx-auto px-6 pb-4 pt-2">
               <div className="flex justify-center items-center gap-4 sm:gap-6 text-sm text-accent flex-wrap">
-                  {navLinks.filter(link => link.href !== pathname).map((link, index, arr) => (
+                  {navLinks.map((link, index, arr) => (
                     <React.Fragment key={link.href}>
-                      <Link href={link.href} className="hover:text-primary">{link.label}</Link>
+                      <Link href={link.href} className={`hover:text-primary ${pathname === link.href ? 'text-primary font-semibold' : ''}`}>{link.label}</Link>
                       {index < arr.length - 1 && <span className="text-muted-foreground/50">·</span>}
                     </React.Fragment>
                   ))}
