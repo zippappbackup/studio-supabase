@@ -24,8 +24,8 @@ export default function FoyerLayout({
 
   return (
     <div className="flex min-h-screen w-full flex-col items-center">
-        {/* STICKY HEADER — stays at top */}
-        <header className="sticky top-0 z-50 w-full bg-[var(--fog-base)] flex-shrink-0">
+        {/* STICKY TRANSPARENT HEADER */}
+        <header className="sticky top-0 z-50 w-full bg-transparent flex-shrink-0">
             <div className="w-full max-w-5xl mx-auto px-4 py-2 flex items-center justify-between">
                 <Logo />
                 <div className="flex items-center gap-2 sm:gap-4">
@@ -46,8 +46,8 @@ export default function FoyerLayout({
             </div>
         </header>
         
-        {/* CONTENT — scrolls naturally, no over-scroll */}
-        <main className="w-full max-w-4xl flex-1 p-6 relative z-10">
+        {/* CONTENT */}
+        <main className="w-full max-w-4xl p-6 relative z-10">
             <div className="w-full space-y-2 text-center">
                 {children}
             </div>
