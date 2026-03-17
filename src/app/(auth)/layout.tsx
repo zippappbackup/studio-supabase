@@ -61,6 +61,14 @@ export default function AuthLayout({
         </div>
         <footer className="w-full max-w-4xl mx-auto px-6 pb-6 pt-2">
           <Separator style={{ backgroundColor: 'hsl(212, 71%, 85.3%)' }} className="mb-4" />
+          <div className="flex justify-center gap-6 pb-3">
+            <a href="https://www.facebook.com/share/1Ah9cGwFNy/" target="_blank" rel="noopener noreferrer" className="bg-black rounded-md p-1.5">
+              <img src="/icons/facebook.svg" alt="Facebook" width={28} height={28} className="h-7 w-7 filter invert" />
+            </a>
+            <a href="https://www.tiktok.com/@zippsg?_r=1&_t=ZS-92uxz5bHYVY" target="_blank" rel="noopener noreferrer" className="bg-black rounded-md p-1.5">
+              <img src="/icons/tiktok.svg" alt="TikTok" width={28} height={28} className="h-7 w-7 filter invert" />
+            </a>
+          </div>
           <p className="text-center text-xs text-muted-foreground">
             © {new Date().getFullYear()} Zipp Super App. All Rights Reserved.
           </p>
