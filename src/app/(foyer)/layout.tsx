@@ -23,28 +23,30 @@ export default function FoyerLayout({
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
+    <div className="flex flex-col h-screen overflow-hidden w-full">
 
-      {/* FIXED HEADER - transparent, stays at top */}
-      <header style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50 }}>
-        <div style={{ maxWidth: '64rem', margin: '0 auto', padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      {/* HEADER — sticky, transparent, never scrolls away */}
+      <header className="sticky top-0 z-50 bg-transparent flex-shrink-0">
+        <div className="w-full max-w-5xl mx-auto px-4 py-2 flex items-center justify-between">
           <Logo />
-          <Button asChild size="sm">
-            <Link href="/login">Log In</Link>
-          </Button>
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Button asChild size="sm">
+              <Link href="/login">Log In</Link>
+            </Button>
+          </div>
         </div>
-        <div style={{ maxWidth: '64rem', margin: '0 auto', padding: '4px 24px 8px' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', flexWrap: 'wrap' }}>
+        <div className="w-full max-w-4xl mx-auto px-6 pb-2">
+          <div className="flex justify-center items-center gap-4 sm:gap-6 text-sm text-accent flex-wrap">
             {navLinks.map((link, index, arr) => (
               <React.Fragment key={link.href}>
                 <Link
                   href={link.href}
-                  style={{ color: pathname === link.href ? 'hsl(212, 71%, 73%)' : undefined, fontWeight: pathname === link.href ? 600 : undefined }}
+                  className={`hover:text-primary ${pathname === link.href ? 'text-primary font-semibold' : ''}`}
                 >
                   {link.label}
                 </Link>
                 {index < arr.length - 1 && (
-                  <span style={{ opacity: 0.4 }}>·</span>
+                  <span className="text-muted-foreground/50">·</span>
                 )}
               </React.Fragment>
             ))}
@@ -52,21 +54,18 @@ export default function FoyerLayout({
         </div>
       </header>
 
-      {/* SPACER - exact height of the fixed header so content starts below it */}
-      <div style={{ height: '80px', flexShrink: 0 }} />
-
-      {/* PAGE CONTENT */}
-      <main style={{ width: '100%', maxWidth: '56rem', margin: '0 auto', padding: '24px' }}>
-        {children}
+      {/* SCROLLABLE AREA — only this scrolls, stops at last element */}
+      <main className="flex-1 overflow-y-auto overflow-x-hidden">
+        <div className="w-full max-w-4xl mx-auto px-6 py-4">
+          {children}
+        </div>
+        <footer className="w-full max-w-4xl mx-auto px-6 pb-6 pt-2">
+          <Separator style={{ backgroundColor: 'hsl(212, 71%, 85.3%)' }} className="mb-4" />
+          <p className="text-center text-xs text-muted-foreground">
+            © {new Date().getFullYear()} Zipp Super App. All Rights Reserved.
+          </p>
+        </footer>
       </main>
-
-      {/* FOOTER */}
-      <footer style={{ width: '100%', maxWidth: '56rem', margin: '0 auto', padding: '8px 24px 16px' }}>
-        <Separator style={{ backgroundColor: 'hsl(212, 71%, 85.3%)', marginBottom: '16px' }} />
-        <p style={{ textAlign: 'center', fontSize: '0.75rem', color: 'hsl(211, 30%, 50%)' }}>
-          © {new Date().getFullYear()} Zipp Super App. All Rights Reserved.
-        </p>
-      </footer>
 
     </div>
   );
