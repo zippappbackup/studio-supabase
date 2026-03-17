@@ -95,34 +95,6 @@ export default function AboutPage() {
         </div>
       </section>
       
-      <div className="py-2">
-        <Separator style={{ backgroundColor: 'hsl(212, 71%, 85.3%)' }} />
-      </div>
-      
-      <section className="space-y-4">
-        <h2 className="text-2xl font-bold text-center">Check out Zipp on our Social Media</h2>
-        <p className="text-muted-foreground max-w-2xl mx-auto text-center">Follow us to see what our community is saying, get the latest updates on new features, and stay connected with the Zipp team!</p>
-        <div className="flex justify-center gap-6 pt-2">
-          <Link href="https://www.facebook.com/share/1Ah9cGwFNy/" target="_blank" rel="noopener noreferrer" className="bg-black rounded-md p-1.5">
-            <img
-              src="/icons/facebook.svg"
-              alt="Facebook"
-              width={28}
-              height={28}
-              className="h-7 w-7 filter invert"
-            />
-          </Link>
-          <Link href="https://www.tiktok.com/@zippsg?_r=1&_t=ZS-92uxz5bHYVY" target="_blank" rel="noopener noreferrer" className="bg-black rounded-md p-1.5">
-            <img
-              src="/icons/tiktok.svg"
-              alt="TikTok"
-              width={28}
-              height={28}
-              className="h-7 w-7 filter invert"
-            />
-          </Link>
-        </div>
-      </section>
     </>
   );
 }
