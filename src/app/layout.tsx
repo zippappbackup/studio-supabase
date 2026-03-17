@@ -64,7 +64,7 @@ export default function RootLayout({
         <SupabaseProvider>
           <AuthProvider>
           <AppCacheProvider>
-            <div className="relative z-10">{children}</div>
+            <div className="relative z-10 h-screen overflow-hidden">{children}</div>
             <InstallPwaPrompt />
           </AppCacheProvider>
           </AuthProvider>
