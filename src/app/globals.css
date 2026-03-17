@@ -92,7 +92,7 @@
     @apply border-border;
   }
   html, body {
-    @apply min-h-screen overflow-x-hidden;
+    @apply overflow-x-hidden;
     font-size: 82%; /* Adjusted from 80% for 2% increase */
     overscroll-behavior-y: contain;
   }
