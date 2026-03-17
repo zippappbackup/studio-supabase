@@ -95,9 +95,9 @@
     height: 100%;
   }
   body {
-    @apply overflow-x-hidden overflow-y-auto;
+    @apply overflow-x-hidden;
     font-size: 82%; /* Adjusted from 80% for 2% increase */
-    overscroll-behavior-y: contain;
+    overscroll-behavior-y: none;
   }
   body {
     @apply bg-background text-foreground;
