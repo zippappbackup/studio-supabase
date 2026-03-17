@@ -91,8 +91,11 @@
   * {
     @apply border-border;
   }
-  html, body {
-    @apply overflow-x-hidden;
+  html {
+    height: 100%;
+  }
+  body {
+    @apply overflow-x-hidden overflow-y-auto;
     font-size: 82%; /* Adjusted from 80% for 2% increase */
     overscroll-behavior-y: contain;
   }

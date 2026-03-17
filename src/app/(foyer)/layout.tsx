@@ -23,34 +23,44 @@ export default function FoyerLayout({
   ];
 
   return (
-    <div className="flex flex-col items-center w-full">
-      <header className="w-full max-w-5xl px-4 py-2 relative z-10 flex items-center justify-between">
-        <Logo />
-        <div className="flex items-center gap-2 sm:gap-4">
-          <Button asChild size="sm">
-            <Link href="/login">Log In</Link>
-          </Button>
+    <div className="flex flex-col items-center w-full min-h-screen">
+      {/* Fixed header — stays at top, transparent, content scrolls under it */}
+      <header className="fixed top-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
+        <div className="w-full max-w-5xl px-4 py-2 flex items-center justify-between pointer-events-auto">
+          <Logo />
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Button asChild size="sm">
+              <Link href="/login">Log In</Link>
+            </Button>
+          </div>
         </div>
       </header>
 
-      <div className="w-full max-w-4xl px-6 pb-4 pt-2 relative z-10">
-        <div className="flex justify-center items-center gap-4 sm:gap-6 text-sm text-accent flex-wrap">
-          {navLinks.map((link, index, arr) => (
-            <React.Fragment key={link.href}>
-              <Link
-                href={link.href}
-                className={`hover:text-primary ${pathname === link.href ? 'text-primary font-semibold' : ''}`}
-              >
-                {link.label}
-              </Link>
-              {index < arr.length - 1 && (
-                <span className="text-muted-foreground/50">·</span>
-              )}
-            </React.Fragment>
-          ))}
+      {/* Nav bar — sits just below the header */}
+      <div className="fixed top-10 left-0 right-0 z-50 flex justify-center pointer-events-none">
+        <div className="w-full max-w-4xl px-6 py-2 pointer-events-auto">
+          <div className="flex justify-center items-center gap-4 sm:gap-6 text-sm text-accent flex-wrap">
+            {navLinks.map((link, index, arr) => (
+              <React.Fragment key={link.href}>
+                <Link
+                  href={link.href}
+                  className={`hover:text-primary ${pathname === link.href ? 'text-primary font-semibold' : ''}`}
+                >
+                  {link.label}
+                </Link>
+                {index < arr.length - 1 && (
+                  <span className="text-muted-foreground/50">·</span>
+                )}
+              </React.Fragment>
+            ))}
+          </div>
         </div>
       </div>
 
+      {/* Spacer so content starts below the fixed header + nav */}
+      <div className="h-20 w-full flex-shrink-0" />
+
+      {/* Page content */}
       <main className="w-full max-w-4xl p-6 relative z-10">
         {children}
       </main>
