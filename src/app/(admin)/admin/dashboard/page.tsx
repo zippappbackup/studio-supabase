@@ -6,7 +6,7 @@ import { useSupabaseCollection } from "@/lib/supabase/hooks";
 import { supabase } from "@/lib/supabase/client";
 import type { Vendor, Promotion, ScrapeCache, ZippUser } from "@/lib/types";
 import { useAppCache } from "@/context/AppCacheProvider";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 
 function KPICard({ title, value, icon: Icon, isLoading, footerText }: { title: string, value: string | number, icon: React.ElementType, isLoading: boolean, footerText?: string }) {
   return (
@@ -45,17 +45,27 @@ export default function AdminDashboard() {
   const { vendorDataset, isVendorDataReady } = useAppCache();
 
   // --- Live Queries for Real-time Data ---
-  const allVendorsQuery = useMemo(
-    () => () => supabase.from('vendors').select('*'),
-    []
-  );
-  const { data: allVendors, isLoading: isLoadingAllVendors } = useSupabaseCollection<Vendor>(allVendorsQuery);
+  const [vendorCount, setVendorCount] = useState<number>(0);
+  const [userCount, setUserCount] = useState<number>(0);
+  const [isLoadingAllVendors, setIsLoadingAllVendors] = useState(true);
+  const [isLoadingAllUsers, setIsLoadingAllUsers] = useState(true);
 
-  const allUsersQuery = useMemo(
-    () => () => supabase.from('users').select('*'),
-    []
-  );
-  const { data: allUsers, isLoading: isLoadingAllUsers } = useSupabaseCollection<ZippUser>(allUsersQuery);
+  useEffect(() => {
+    const fetchCounts = async () => {
+      const { count: vCount } = await supabase
+        .from('vendors')
+        .select('*', { count: 'exact', head: true });
+      setVendorCount(vCount ?? 0);
+      setIsLoadingAllVendors(false);
+
+      const { count: uCount } = await supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true });
+      setUserCount(uCount ?? 0);
+      setIsLoadingAllUsers(false);
+    };
+    fetchCounts();
+  }, []);
 
   const pendingClaimsQuery = useMemo(
     () => () => supabase.from('vendors').select('*').eq('subscription_status', 'claimed_pending_approval'),
@@ -98,14 +108,14 @@ export default function AdminDashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <KPICard 
           title="Total Vendors"
-          value={allVendors?.length ?? 0}
+          value={vendorCount}
           icon={Users}
           isLoading={isLoadingAllVendors}
           footerText="Live count from database"
         />
         <KPICard 
           title="Total Users"
-          value={allUsers?.length ?? 0}
+          value={userCount}
           icon={Users}
           isLoading={isLoadingAllUsers}
           footerText="Live count from database"
