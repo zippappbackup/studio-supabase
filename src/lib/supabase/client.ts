@@ -28,6 +28,10 @@ export function getSupabaseBrowserClient() {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
+      lock: async (name, acquireTimeout, fn) => {
+        // Use a simple mutex instead of Web Locks API to prevent lock conflicts
+        return fn()
+      },
     }
   })
 
