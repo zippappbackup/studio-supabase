@@ -52,20 +52,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    // Get initial session
-    const initAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        await fetchUserProfile(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    };
-
-    initAuth();
-
-    // Listen for auth changes
+    // Use onAuthStateChange as the single source of truth
+    // This fires immediately with the current session on mount
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         await fetchUserProfile(session.user.id);
@@ -80,9 +68,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserProfile = async (uid: string) => {
     try {
-      // Refresh session first to ensure token is valid
-      await supabase.auth.refreshSession();
-
       const { data, error } = await supabase
         .from('users')
         .select('*')
