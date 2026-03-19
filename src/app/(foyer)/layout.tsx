@@ -24,7 +24,6 @@ export default function FoyerLayout({
 
   const mainRef = useRef<HTMLElement>(null);
 
-  // Reset scroll position on page navigation
   useEffect(() => {
     if (mainRef.current) {
       mainRef.current.scrollTop = 0;
