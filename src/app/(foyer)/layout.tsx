@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import "@/app/globals.css";
 import Logo from "@/components/core/Logo";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,15 @@ export default function FoyerLayout({
     { href: "/signup", label: "Sign Up" },
     { href: "/contact", label: "Contact" },
   ];
+
+  const mainRef = useRef<HTMLElement>(null);
+
+  // Reset scroll position on page navigation
+  useEffect(() => {
+    if (mainRef.current) {
+      mainRef.current.scrollTop = 0;
+    }
+  }, [pathname]);
 
   return (
     <div className="flex flex-col h-dvh overflow-hidden w-full">
@@ -55,7 +64,7 @@ export default function FoyerLayout({
       </header>
 
       {/* SCROLLABLE AREA — only this scrolls, stops at last element */}
-      <main className="flex-1 overflow-y-auto overflow-x-hidden">
+      <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden">
         <div className="w-full max-w-4xl mx-auto px-6 py-4">
           {children}
         </div>
