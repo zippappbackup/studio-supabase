@@ -79,30 +79,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const fetchUserProfile = async (uid: string) => {
-    console.log('fetchUserProfile: starting for uid', uid);
     try {
-      console.log('fetchUserProfile: making supabase request');
-      const { data, error } = await supabase
+      // Timeout after 5 seconds to prevent infinite spinner
+      const timeoutPromise = new Promise<null>((resolve) => 
+        setTimeout(() => resolve(null), 5000)
+      );
+
+      const fetchPromise = supabase
         .from('users')
         .select('*')
         .eq('uid', uid)
-        .maybeSingle();
+        .maybeSingle()
+        .then(({ data, error }) => {
+          if (error) {
+            console.error('Error fetching user profile:', error);
+            return null;
+          }
+          return data;
+        });
 
-      console.log('fetchUserProfile: got response', { data, error });
+      const result = await Promise.race([fetchPromise, timeoutPromise]);
 
-      if (error) {
-        console.error('Error fetching user profile:', error);
-        setUser(null);
-      } else if (data) {
-        setUser(data as ZippUser);
+      if (result) {
+        setUser(result as ZippUser);
       } else {
         setUser(null);
       }
     } catch (error) {
-      console.error('fetchUserProfile: caught error', error);
+      console.error('Error fetching user profile:', error);
       setUser(null);
     } finally {
-      console.log('fetchUserProfile: finally block, setting loading false');
       setLoading(false);
     }
   };
