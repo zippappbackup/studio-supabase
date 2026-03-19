@@ -33,7 +33,7 @@ export default function FoyerLayout({
   return (
     <div className="flex flex-col h-dvh overflow-hidden w-full">
 
-      {/* HEADER — sticky, transparent, never scrolls away */}
+      {/* HEADER */}
       <header className="sticky top-0 z-50 bg-transparent flex-shrink-0">
         <div className="w-full max-w-5xl mx-auto px-4 py-2 flex items-center justify-between">
           <Logo />
@@ -47,12 +47,7 @@ export default function FoyerLayout({
           <div className="flex justify-center items-center gap-4 sm:gap-6 text-sm text-accent flex-wrap">
             {navLinks.map((link, index, arr) => (
               <React.Fragment key={link.href}>
-                
-                  href={link.href}
-                  className={`hover:text-primary ${pathname === link.href ? 'text-primary font-semibold' : ''}`}
-                >
-                  {link.label}
-                </a>
+                <a href={link.href} className={`hover:text-primary ${pathname === link.href ? "text-primary font-semibold" : ""}`}>{link.label}</a>
                 {index < arr.length - 1 && (
                   <span className="text-muted-foreground/50">·</span>
                 )}
@@ -62,13 +57,13 @@ export default function FoyerLayout({
         </div>
       </header>
 
-      {/* SCROLLABLE AREA — only this scrolls, stops at last element */}
+      {/* SCROLLABLE AREA */}
       <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden">
         <div className="w-full max-w-4xl mx-auto px-6 py-4">
           {children}
         </div>
         <footer className="w-full max-w-4xl mx-auto px-6 pb-6 pt-2">
-          <Separator style={{ backgroundColor: 'hsl(212, 71%, 85.3%)' }} className="mb-4" />
+          <Separator style={{ backgroundColor: "hsl(212, 71%, 85.3%)" }} className="mb-4" />
           <div className="flex justify-center gap-6 pb-3">
             <a href="https://www.facebook.com/share/1Ah9cGwFNy/" target="_blank" rel="noopener noreferrer" className="bg-black rounded-md p-1.5">
               <img src="/icons/facebook.svg" alt="Facebook" width={28} height={28} className="h-7 w-7 filter invert" />
