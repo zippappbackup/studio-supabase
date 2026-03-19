@@ -48,12 +48,12 @@ export default function FoyerLayout({
           <div className="flex justify-center items-center gap-4 sm:gap-6 text-sm text-accent flex-wrap">
             {navLinks.map((link, index, arr) => (
               <React.Fragment key={link.href}>
-                <Link
+                
                   href={link.href}
                   className={`hover:text-primary ${pathname === link.href ? 'text-primary font-semibold' : ''}`}
                 >
                   {link.label}
-                </Link>
+                </a>
                 {index < arr.length - 1 && (
                   <span className="text-muted-foreground/50">·</span>
                 )}
