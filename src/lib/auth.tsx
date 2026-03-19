@@ -84,13 +84,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .from('users')
         .select('*')
         .eq('uid', uid)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching user profile:', error);
         setUser(null);
       } else if (data) {
         setUser(data as ZippUser);
+      } else {
+        setUser(null);
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
