@@ -52,12 +52,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    // Use onAuthStateChange as the single source of truth
-    // This fires immediately with the current session on mount
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    // Get initial session
+    const initAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         await fetchUserProfile(session.user.id);
       } else {
+        setUser(null);
+        setLoading(false);
+      }
+    };
+    initAuth();
+
+    // Only listen for explicit sign in/out events
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        await fetchUserProfile(session.user.id);
+      } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setLoading(false);
       }
