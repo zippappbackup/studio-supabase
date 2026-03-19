@@ -3,9 +3,9 @@
 // Replaces: src/firebase/config.ts and src/firebase/index.ts
 // ============================================================================
 
-import { createBrowserClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 
-let client: ReturnType<typeof createBrowserClient> | null = null
+let client: ReturnType<typeof createClient> | null = null
 
 /**
  * Get or create a Supabase client for browser-side operations
@@ -23,7 +23,13 @@ export function getSupabaseBrowserClient() {
     throw new Error('Missing Supabase environment variables')
   }
 
-  client = createBrowserClient(supabaseUrl, supabaseAnonKey)
+  client = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    }
+  })
 
   return client
 }
