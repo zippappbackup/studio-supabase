@@ -80,28 +80,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserProfile = async (uid: string) => {
     try {
-      // Timeout after 5 seconds to prevent infinite spinner
-      const timeoutPromise = new Promise<null>((resolve) => 
-        setTimeout(() => resolve(null), 5000)
-      );
+      // Refresh session first to ensure token is valid
+      await supabase.auth.refreshSession();
 
-      const fetchPromise = supabase
+      const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('uid', uid)
-        .maybeSingle()
-        .then(({ data, error }) => {
-          if (error) {
-            console.error('Error fetching user profile:', error);
-            return null;
-          }
-          return data;
-        });
+        .maybeSingle();
 
-      const result = await Promise.race([fetchPromise, timeoutPromise]);
-
-      if (result) {
-        setUser(result as ZippUser);
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        setUser(null);
+      } else if (data) {
+        setUser(data as ZippUser);
       } else {
         setUser(null);
       }
