@@ -108,9 +108,57 @@ export function DataImporterClientPage() {
                     }
                 }
                 
+                // NOW IMPORT REVIEWS from the vendor data
+                let reviewCount = 0;
+                const allReviews = [];
+                
+                for (const vendor of vendors) {
+                    const vendorId = vendor.id || vendor.vendor_id;
+                    const reviews = vendor.reviews || [];
+                    
+                    for (const review of reviews) {
+                        // Generate a unique review_id from vendor + author + time
+                        const reviewId = `google-${vendorId}-${review.author_name?.replace(/\s/g, '-')}-${review.time}`;
+                        
+                        allReviews.push({
+                            review_id: reviewId,
+                            vendor_id: vendorId,
+                            user_id: null, // Google reviews don't have user_id
+                            user_name: null, // Google reviews don't have user_name
+                            user_avatar: review.profile_photo_url || null,
+                            rating: review.rating,
+                            text: review.text,
+                            author_name: review.author_name,
+                            time: review.time,
+                            created_at: new Date().toISOString(),
+                            updated_at: new Date().toISOString(),
+                        });
+                    }
+                }
+                
+                // Insert reviews in batches
+                if (allReviews.length > 0) {
+                    for (let i = 0; i < allReviews.length; i += BATCH_SIZE) {
+                        const reviewBatch = allReviews.slice(i, i + BATCH_SIZE);
+                        
+                        const { error: reviewError } = await supabase
+                            .from('reviews')
+                            .upsert(reviewBatch, { 
+                                onConflict: 'review_id',
+                                ignoreDuplicates: true 
+                            });
+                        
+                        if (reviewError && reviewError.code !== '23505') {
+                            console.error('Review import error:', reviewError);
+                        } else {
+                            reviewCount += reviewBatch.length;
+                        }
+                    }
+                }
+                
                 toast({
                     title: "Import Complete",
-                    description: `Successfully processed ${createdCount} vendors. Skipped ${skippedCount} potential duplicates.`,
+                    description: `Successfully processed ${createdCount} vendors and ${reviewCount} reviews. Skipped ${skippedCount} potential duplicates.`,
                     variant: "success",
                 });
             } catch (err: any) {
@@ -219,7 +267,7 @@ export function DataImporterClientPage() {
                 <div className="space-y-4 p-4 border rounded-lg bg-background">
                     <Label htmlFor="vendor-file-upload" className="font-semibold">Import New Vendors from File</Label>
                     <p className="text-sm text-muted-foreground">
-                        Upload a JSON array of vendor objects. The system performs deduplication and writes in batches.
+                        Upload a JSON array of vendor objects. The system performs deduplication and writes in batches. Reviews will also be imported.
                     </p>
                     <div className="flex items-center gap-4">
                         <Input id="vendor-file-upload" type="file" accept="application/json" onChange={handleFileChange} disabled={isUploading} />
