@@ -382,7 +382,7 @@ export function VendorProfileClientPage({ vendorId }: { vendorId: string }) {
       if (vendorId && user && hydratedVendor?.name) {
           // Increment profile views
           supabase.rpc('increment_profile_views', { vendor_id_param: vendorId })
-            .catch(err => console.warn("Failed to increment profile view count:", err));
+            .then(({ error }) => { if (error) console.warn("Failed to increment profile view count:", error); });
           // Log activity
           logActivity(supabase, user.uid, 'view_vendor', { vendorId: vendorId, vendorName: hydratedVendor.name });
       }
