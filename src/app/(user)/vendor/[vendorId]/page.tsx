@@ -1,5 +1,6 @@
 import { VendorProfileClientPage } from "./VendorProfileClientPage";
 export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
 import { VendorProfileErrorBoundary } from "./VendorProfileErrorBoundary";
 import { createClient } from '@supabase/supabase-js';
 import type { Metadata } from "next";
