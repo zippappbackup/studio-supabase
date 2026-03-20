@@ -90,14 +90,28 @@ export function AppCacheProvider({ children }: { children: ReactNode }) {
           console.log("AppCacheProvider: Using pre-computed vendor dataset");
           vendors = configData.vendors;
         } else {
-          // Fallback: Query all vendors directly
+          // Fallback: Query all vendors directly with pagination
           console.log("AppCacheProvider: Fetching all vendors directly from database");
-          const { data: vendorData, error: vendorError } = await supabase
-            .from('vendors')
-            .select('*')
-            .order('name');
+          let allVendorData: any[] = [];
+          let from = 0;
+          const batchSize = 1000;
           
-          if (vendorError) throw vendorError;
+          while (true) {
+            const { data: batch, error: vendorError } = await supabase
+              .from('vendors')
+              .select('vendor_id, name, normalized_name, searchable_name, category_id, logo_url, description, region, lat, lng, address, phone, email, website, google_rating, google_review_count, zipp_rating, zipp_review_count, tags, matched_keywords, modules_enabled, subscription_status, photos, promotions, business_status')
+              .order('name')
+              .range(from, from + batchSize - 1);
+            
+            if (vendorError) throw vendorError;
+            if (!batch || batch.length === 0) break;
+            
+            allVendorData = [...allVendorData, ...batch];
+            if (batch.length < batchSize) break;
+            from += batchSize;
+          }
+          
+          const vendorData = allVendorData;
           
           // Transform to lean camelCase format for search (excludes heavy fields like reviews/photos)
           vendors = (vendorData || []).map(v => ({
