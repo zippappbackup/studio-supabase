@@ -99,10 +99,28 @@ export function AppCacheProvider({ children }: { children: ReactNode }) {
           
           if (vendorError) throw vendorError;
           
-          // Transform to match Vendor type (vendor_id -> id)
+          // Transform to match Vendor type (snake_case -> camelCase)
           vendors = (vendorData || []).map(v => ({
             ...v,
-            id: v.vendor_id
+            id: v.vendor_id,
+            categoryId: v.category_id,
+            logoUrl: v.logo_url,
+            googleRating: v.google_rating,
+            googleReviewCount: v.google_review_count,
+            zippRating: v.zipp_rating,
+            zippReviewCount: v.zipp_review_count,
+            operatingHours: v.operating_hours,
+            googlePlaceId: v.google_place_id,
+            googleLastSyncedAt: v.google_last_synced_at,
+            normalizedName: v.normalized_name,
+            searchableName: v.searchable_name,
+            searchableTags: v.searchable_tags,
+            matchedKeywords: v.matched_keywords,
+            modulesEnabled: v.modules_enabled,
+            subscriptionStatus: v.subscription_status,
+            createdAt: v.created_at,
+            updatedAt: v.updated_at,
+            businessStatus: v.business_status,
           })) as Vendor[];
         }
         
