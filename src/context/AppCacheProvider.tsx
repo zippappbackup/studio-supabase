@@ -192,15 +192,36 @@ export function AppCacheProvider({ children }: { children: ReactNode }) {
 
         const { data: highlightsData, error } = await supabase
           .from('zipp_highlights')
-          .select('vendors')
-          .eq('id', 'singleton')
+          .select('vendor_ids')
+          .eq('singleton_key', 'singleton')
           .single();
         
         if (error) throw error;
         
-        if (highlightsData?.vendors) {
-          setZippHighlights(highlightsData.vendors);
-          localStorage.setItem(HIGHLIGHTS_CACHE_KEY, JSON.stringify({ data: highlightsData.vendors, timestamp: Date.now() }));
+        if (highlightsData?.vendor_ids && highlightsData.vendor_ids.length > 0) {
+          // Fetch full vendor data for each highlighted vendor ID
+          const { data: vendorData, error: vendorError } = await supabase
+            .from('vendors')
+            .select('*')
+            .in('vendor_id', highlightsData.vendor_ids);
+          
+          if (vendorError) throw vendorError;
+          
+          const highlights = (vendorData || []).map(v => ({
+            ...v,
+            id: v.vendor_id,
+            categoryId: v.category_id,
+            logoUrl: v.logo_url,
+            googleRating: v.google_rating,
+            googleReviewCount: v.google_review_count,
+            zippRating: v.zipp_rating,
+            zippReviewCount: v.zipp_review_count,
+            matchedKeywords: v.matched_keywords,
+            subscriptionStatus: v.subscription_status,
+          }));
+          
+          setZippHighlights(highlights);
+          localStorage.setItem(HIGHLIGHTS_CACHE_KEY, JSON.stringify({ data: highlights, timestamp: Date.now() }));
         } else {
             setZippHighlights([]);
         }

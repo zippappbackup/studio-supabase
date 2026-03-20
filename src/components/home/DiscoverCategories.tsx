@@ -10,10 +10,10 @@ export function DiscoverCategories() {
   const { categories, isVendorDataReady: isAppCacheReady } = useAppCache();
 
   const icons: { [key: string]: string } = {
-    'car care': '/icons/car care.svg',
-    'cleaning services': '/icons/cleaning services.svg',
-    'handyman services': '/icons/handyman services.svg',
-    'mobile device repair': '/icons/mobile device repair.svg',
+    'car care': '/icons/car-care.svg',
+    'cleaning services': '/icons/cleaning-services.svg',
+    'handyman services': '/icons/handyman-services.svg',
+    'mobile device repair': '/icons/mobile-device-repair.svg',
     'default': '/icons/Explore.svg',
   };
 
