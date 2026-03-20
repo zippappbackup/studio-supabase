@@ -9,23 +9,15 @@ const nextConfig: NextConfig = {
 
   // 2. Optimized Image Configuration
   images: {
-    // If Next.js native optimization still causes issues, set this to true
-    // unoptimized: true, 
-    
+    unoptimized: true,
     remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "placehold.co",
-      },
-      {
-        protocol: "https",
-        hostname: "firebasestorage.googleapis.com",
-        pathname: "/v0/b/**", // Restricts to your storage buckets
-      },
-      {
-        protocol: "https://",
-        hostname: "lh3.googleusercontent.com", // For Google Auth profile pics
-      },
+      { protocol: "https", hostname: "placehold.co" },
+      { protocol: "https", hostname: "firebasestorage.googleapis.com" },
+      { protocol: "https", hostname: "lh3.googleusercontent.com" },
+      { protocol: "https", hostname: "maps.googleapis.com" },
+      { protocol: "https", hostname: "*.supabase.co" },
+      { protocol: "https", hostname: "*.googleusercontent.com" },
+      { protocol: "https", hostname: "*.googleapis.com" },
     ],
   },
   
