@@ -80,7 +80,7 @@ export function AppCacheProvider({ children }: { children: ReactNode }) {
         const { data: configData, error: configError } = await supabase
           .from('vendor_dataset_config')
           .select('*')
-          .eq('id', 'global')
+          .eq('config_key', 'global')
           .single();
         
         let vendors: Vendor[] = [];
@@ -99,27 +99,32 @@ export function AppCacheProvider({ children }: { children: ReactNode }) {
           
           if (vendorError) throw vendorError;
           
-          // Transform to match Vendor type (snake_case -> camelCase)
+          // Transform to lean camelCase format for search (excludes heavy fields like reviews/photos)
           vendors = (vendorData || []).map(v => ({
-            ...v,
             id: v.vendor_id,
+            name: v.name,
+            normalizedName: v.normalized_name,
+            searchableName: v.searchable_name,
             categoryId: v.category_id,
             logoUrl: v.logo_url,
+            description: v.description,
+            region: v.region,
+            lat: v.lat,
+            lng: v.lng,
+            address: v.address,
+            phone: v.phone,
+            email: v.email,
+            website: v.website,
             googleRating: v.google_rating,
             googleReviewCount: v.google_review_count,
             zippRating: v.zipp_rating,
             zippReviewCount: v.zipp_review_count,
-            operatingHours: v.operating_hours,
-            googlePlaceId: v.google_place_id,
-            googleLastSyncedAt: v.google_last_synced_at,
-            normalizedName: v.normalized_name,
-            searchableName: v.searchable_name,
-            searchableTags: v.searchable_tags,
+            tags: v.tags,
             matchedKeywords: v.matched_keywords,
             modulesEnabled: v.modules_enabled,
             subscriptionStatus: v.subscription_status,
-            createdAt: v.created_at,
-            updatedAt: v.updated_at,
+            photos: (v.photos || []).slice(0, 1),
+            promotions: v.promotions || [],
             businessStatus: v.business_status,
           })) as Vendor[];
         }
