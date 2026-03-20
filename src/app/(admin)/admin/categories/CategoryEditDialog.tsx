@@ -147,6 +147,7 @@ export function CategoryEditDialog({
         const docId = data.name.toLowerCase().replace(/\s+/g, '-');
         const finalData = {
           id: docId,
+          category_id: docId,
           name: data.name,
           description: data.description || "",
           icon_url: data.iconUrl || "",
