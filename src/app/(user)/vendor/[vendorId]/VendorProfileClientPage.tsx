@@ -150,78 +150,81 @@ function WriteReview({ vendor, onReviewAdded, existingReview, onCancelEdit }: { 
       toast({title: "Please write something for your review.", variant: "destructive" });
       return;
     }
-    if (!db || !user) return;
+    if (!user) return;
 
     setIsSubmitting(true);
     
     try {
-      const newReviewData = await runTransaction(db, async (transaction) => {
-        const vendorRef = doc(db, "vendors", vendor.id);
-        const userRef = doc(db, "users", user.uid);
-        
-        const [vendorSnap, userSnap] = await Promise.all([
-          transaction.get(vendorRef),
-          transaction.get(userRef)
-        ]);
+      // Fetch current vendor data
+      const { data: vendorData, error: fetchError } = await supabase
+        .from('vendors')
+        .select('reviews, zipp_rating, zipp_review_count')
+        .eq('vendor_id', vendor.id)
+        .single();
 
-        if (!vendorSnap.exists()) throw new Error("Vendor not found!");
-        if (!userSnap.exists()) throw new Error("User profile not found!");
-        
-        const vendorData = vendorSnap.data() as Vendor;
-        const userData = userSnap.data() as ZippUser;
-        const existingReviews = vendorData.reviews || [];
-        const userReviewIndex = existingReviews.findIndex(r => r.userId === user.uid);
+      if (fetchError) throw fetchError;
 
-        let newReviews: Review[];
-        let newTotalRating = (vendorData.zippRating || 0) * (vendorData.zippReviewCount || 0);
-        let newReviewCount = vendorData.zippReviewCount || 0;
-        let finalReview: Review;
-        
-        const displayName = userData.name || "A Zipp User";
-        const userAvatar = userData.photoURL ?? null;
+      const { data: userData } = await supabase
+        .from('users')
+        .select('name, photo_url')
+        .eq('uid', user.uid)
+        .single();
 
-        if (userReviewIndex > -1) {
-            const originalReview = existingReviews[userReviewIndex];
-            newTotalRating = newTotalRating - originalReview.rating + rating;
-            
-            newReviews = [...existingReviews];
-            finalReview = {
-                ...originalReview,
-                rating,
-                text,
-                userName: displayName,
-                userAvatar: userAvatar,
-                updatedAt: new Date(),
-            };
-            newReviews[userReviewIndex] = finalReview;
-        } else {
-            finalReview = {
-                id: user.uid,
-                vendorId: vendor.id,
-                userId: user.uid,
-                userName: displayName,
-                userAvatar: userAvatar,
-                rating,
-                text,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-            };
-            newReviews = [...existingReviews, finalReview];
-            newTotalRating += rating;
-            newReviewCount += 1;
-        }
+      const existingReviews: Review[] = vendorData.reviews || [];
+      const userReviewIndex = existingReviews.findIndex((r: Review) => r.userId === user.uid);
 
-        const newAverageRating = newReviewCount > 0 ? newTotalRating / newReviewCount : 0;
-        
-        transaction.update(vendorRef, { 
-            reviews: newReviews,
-            zippRating: newAverageRating,
-            zippReviewCount: newReviewCount,
-            updatedAt: new Date()
-        });
-        return finalReview;
-      });
-      
+      let newReviews: Review[];
+      let newTotalRating = (vendorData.zipp_rating || 0) * (vendorData.zipp_review_count || 0);
+      let newReviewCount = vendorData.zipp_review_count || 0;
+      let finalReview: Review;
+
+      const displayName = userData?.name || "A Zipp User";
+      const userAvatar = userData?.photo_url ?? null;
+
+      if (userReviewIndex > -1) {
+        const originalReview = existingReviews[userReviewIndex];
+        newTotalRating = newTotalRating - originalReview.rating + rating;
+        newReviews = [...existingReviews];
+        finalReview = {
+          ...originalReview,
+          rating,
+          text,
+          userName: displayName,
+          userAvatar: userAvatar,
+          updatedAt: new Date().toISOString(),
+        };
+        newReviews[userReviewIndex] = finalReview;
+      } else {
+        finalReview = {
+          id: user.uid,
+          vendorId: vendor.id,
+          userId: user.uid,
+          userName: displayName,
+          userAvatar: userAvatar,
+          rating,
+          text,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        newReviews = [...existingReviews, finalReview];
+        newTotalRating += rating;
+        newReviewCount += 1;
+      }
+
+      const newAverageRating = newReviewCount > 0 ? newTotalRating / newReviewCount : 0;
+
+      const { error: updateError } = await supabase
+        .from('vendors')
+        .update({
+          reviews: newReviews,
+          zipp_rating: newAverageRating,
+          zipp_review_count: newReviewCount,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('vendor_id', vendor.id);
+
+      if (updateError) throw updateError;
+
       toast({title: isEditing ? "Your review has been updated." : "Thank you for your review.", variant: "success"});
 
       if (onCancelEdit) {
@@ -230,18 +233,12 @@ function WriteReview({ vendor, onReviewAdded, existingReview, onCancelEdit }: { 
         setRating(0);
         setText("");
       }
-      onReviewAdded(newReviewData);
+      onReviewAdded(finalReview);
 
     } catch(error: any) {
-        const contextualError = new FirestorePermissionError({
-          operation: 'write',
-          path: `/vendors/${vendor.id}`, 
-          requestResourceData: { rating, text }
-        });
-        errorEmitter.emit('permission-error', contextualError);
         toast({title: "Submission failed", description: error.message, variant: "destructive" });
     } finally {
-      setIsSubmitting(true);
+      setIsSubmitting(false);
     }
   };
 
@@ -361,13 +358,14 @@ export function VendorProfileClientPage({ vendorId }: { vendorId: string }) {
   }, [user, hydratedVendor]);
 
   useEffect(() => {
-      if (vendorId && db && user && hydratedVendor?.name) {
-          const docRef = doc(db, 'vendors', vendorId);
-          updateDoc(docRef, { profileViews: increment(1) })
-              .catch(err => console.warn("Failed to increment profile view count:", err));
-          logActivity(db, user.uid, 'view_vendor', { vendorId: vendorId, vendorName: hydratedVendor.name });
+      if (vendorId && user && hydratedVendor?.name) {
+          // Increment profile views
+          supabase.rpc('increment_profile_views', { vendor_id_param: vendorId })
+            .catch(err => console.warn("Failed to increment profile view count:", err));
+          // Log activity
+          logActivity(supabase, user.uid, 'view_vendor', { vendorId: vendorId, vendorName: hydratedVendor.name });
       }
-  }, [vendorId, db, user, hydratedVendor?.name]);
+  }, [vendorId, user, hydratedVendor?.name]);
 
 
   const offerings = hydratedVendor?.offerings || [];
@@ -418,49 +416,50 @@ export function VendorProfileClientPage({ vendorId }: { vendorId: string }) {
   };
   
   const confirmDelete = async () => {
-    if (!reviewToDelete || !db || !hydratedVendor || !user) return;
+    if (!reviewToDelete || !hydratedVendor || !user) return;
     
     setIsDeleteDialogOpen(false);
     setDeletingReviewId(reviewToDelete.id);
     toast({ title: "Your review is being deleted", variant: "info" });
 
     try {
-        await runTransaction(db, async (transaction) => {
-            const vendorRef = doc(db, "vendors", hydratedVendor.id);
-            const vendorSnap = await transaction.get(vendorRef);
-            if (!vendorSnap.exists()) throw new Error("Vendor not found!");
-            
-            const currentVendorData = vendorSnap.data() as Vendor;
-            const currentReviews = currentVendorData.reviews || [];
-            
-            const reviewToRemove = currentReviews.find(r => r.userId === reviewToDelete.userId);
-            if (!reviewToRemove) {
-              console.log("Review already deleted, skipping transaction.");
-              return; 
-            }
-            
-            const newReviews = currentReviews.filter(r => r.userId !== reviewToDelete.userId);
+        const { data: vendorData, error: fetchError } = await supabase
+          .from('vendors')
+          .select('reviews, zipp_rating, zipp_review_count')
+          .eq('vendor_id', hydratedVendor.id)
+          .single();
 
-            const newTotalRating = (currentVendorData.zippRating || 0) * (currentVendorData.zippReviewCount || 0) - reviewToRemove.rating;
-            const newReviewCount = Math.max(0, (currentVendorData.zippReviewCount || 0) - 1);
-            const newAverageRating = newReviewCount > 0 ? newTotalRating / newReviewCount : 0;
-            
-            transaction.update(vendorRef, {
-                reviews: newReviews,
-                zippRating: newAverageRating,
-                zippReviewCount: newReviewCount,
-                updatedAt: serverTimestamp(),
-            });
-        });
-  
-      const storageKey = `review_submitted_${hydratedVendor.id}_${user.uid}`;
-      localStorage.removeItem(storageKey);
-      setHasSubmittedReview(false);
-      
-      if (editingReview?.id === reviewToDelete.id) {
-        setEditingReview(undefined);
-      }
-      
+        if (fetchError) throw fetchError;
+
+        const currentReviews: Review[] = vendorData.reviews || [];
+        const reviewToRemove = currentReviews.find((r: Review) => r.userId === reviewToDelete.userId);
+        if (!reviewToRemove) return;
+
+        const newReviews = currentReviews.filter((r: Review) => r.userId !== reviewToDelete.userId);
+        const newTotalRating = (vendorData.zipp_rating || 0) * (vendorData.zipp_review_count || 0) - reviewToRemove.rating;
+        const newReviewCount = Math.max(0, (vendorData.zipp_review_count || 0) - 1);
+        const newAverageRating = newReviewCount > 0 ? newTotalRating / newReviewCount : 0;
+
+        const { error: updateError } = await supabase
+          .from('vendors')
+          .update({
+            reviews: newReviews,
+            zipp_rating: newAverageRating,
+            zipp_review_count: newReviewCount,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('vendor_id', hydratedVendor.id);
+
+        if (updateError) throw updateError;
+
+        const storageKey = `review_submitted_${hydratedVendor.id}_${user.uid}`;
+        localStorage.removeItem(storageKey);
+        setHasSubmittedReview(false);
+
+        if (editingReview?.id === reviewToDelete.id) {
+          setEditingReview(undefined);
+        }
+
     } catch (error) {
       console.error("Failed to delete review:", error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -474,7 +473,7 @@ export function VendorProfileClientPage({ vendorId }: { vendorId: string }) {
   };
 
   const handleCollect = async (promotion: Promotion) => {
-    if (!user || !db || !hydratedVendor) {
+    if (!user || !hydratedVendor) {
         toast({ title: "Login Required", description: "You must be logged in to collect promotions.", variant: "destructive" });
         return;
     }
@@ -482,40 +481,53 @@ export function VendorProfileClientPage({ vendorId }: { vendorId: string }) {
     toast({ title: "Collecting promotion...", variant: "info" });
     
     try {
-        await runTransaction(db, async (transaction) => {
-            const userRef = doc(db, 'users', user.uid);
-            const vendorRef = doc(db, 'vendors', hydratedVendor.id);
-            
-            const vendorSnap = await transaction.get(vendorRef);
-            if (!vendorSnap.exists()) throw new Error("Vendor not found during transaction.");
-            
-            const redemptionId = uuidv4();
-            const newCollection: UserCollection = {
-                promotionId: promotion.id,
-                vendorId: hydratedVendor.id,
-                collectedAt: new Date(),
-                redemptionId: redemptionId,
-            };
-            transaction.update(userRef, {
-                collectedPromotions: arrayUnion(newCollection)
-            });
+        const redemptionId = uuidv4();
+        
+        // Update user's collected promotions
+        const { data: currentUser } = await supabase
+          .from('users')
+          .select('collected_promotions')
+          .eq('uid', user.uid)
+          .single();
 
-            const newRedemptionEvent: RedemptionEvent = { 
-                redemptionId: redemptionId,
-                userId: user.uid, 
-                status: 'collected',
-                collectedAt: new Date()
-            };
+        const newCollection: UserCollection = {
+            promotionId: promotion.id,
+            vendorId: hydratedVendor.id,
+            collectedAt: new Date().toISOString(),
+            redemptionId: redemptionId,
+        };
 
-            const vendorData = vendorSnap.data() as Vendor;
-            const newPromotions = [...(vendorData.promotions || [])];
-            const promoIndex = newPromotions.findIndex(p => p.id === promotion.id);
-            if (promoIndex > -1) {
-                const currentRedemptions = newPromotions[promoIndex].redemptions || [];
-                newPromotions[promoIndex].redemptions = [...currentRedemptions, newRedemptionEvent];
-                transaction.update(vendorRef, { promotions: newPromotions });
-            }
-        });
+        const updatedCollections = [...(currentUser?.collected_promotions || []), newCollection];
+
+        await supabase
+          .from('users')
+          .update({ collected_promotions: updatedCollections })
+          .eq('uid', user.uid);
+
+        // Update vendor's promotion redemptions
+        const { data: vendorData } = await supabase
+          .from('vendors')
+          .select('promotions')
+          .eq('vendor_id', hydratedVendor.id)
+          .single();
+
+        const newRedemptionEvent: RedemptionEvent = {
+            redemptionId: redemptionId,
+            userId: user.uid,
+            status: 'collected',
+            collectedAt: new Date().toISOString(),
+        };
+
+        const newPromotions = [...(vendorData?.promotions || [])];
+        const promoIndex = newPromotions.findIndex((p: Promotion) => p.id === promotion.id);
+        if (promoIndex > -1) {
+            const currentRedemptions = newPromotions[promoIndex].redemptions || [];
+            newPromotions[promoIndex].redemptions = [...currentRedemptions, newRedemptionEvent];
+            await supabase
+              .from('vendors')
+              .update({ promotions: newPromotions })
+              .eq('vendor_id', hydratedVendor.id);
+        }
         
         toast({ title: "Promotion Collected!", description: "View it in your Zipp Hub.", variant: "success" });
     } catch (error: any) {
