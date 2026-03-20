@@ -339,11 +339,32 @@ export function VendorProfileClientPage({ vendorId }: { vendorId: string }) {
   }, [vendorId, getVendorFromSnapshot, isVendorDataReady]);
 
   // Derived state: Merge snapshot and live data. Prioritize live data.
+  // Transform snake_case from Supabase to camelCase expected by the UI
   const hydratedVendor = useMemo(() => {
-    if (liveVendor) {
-      return liveVendor;
-    }
-    return vendorFromSnapshot;
+    const source = liveVendor || vendorFromSnapshot;
+    if (!source) return null;
+    return {
+      ...source,
+      id: (source as any).vendor_id || source.id,
+      categoryId: (source as any).category_id || source.categoryId,
+      logoUrl: (source as any).logo_url || source.logoUrl,
+      googleRating: (source as any).google_rating ?? source.googleRating,
+      googleReviewCount: (source as any).google_review_count ?? source.googleReviewCount,
+      zippRating: (source as any).zipp_rating ?? source.zippRating,
+      zippReviewCount: (source as any).zipp_review_count ?? source.zippReviewCount,
+      operatingHours: (source as any).operating_hours || source.operatingHours,
+      googlePlaceId: (source as any).google_place_id || source.googlePlaceId,
+      normalizedName: (source as any).normalized_name || source.normalizedName,
+      searchableName: (source as any).searchable_name || source.searchableName,
+      matchedKeywords: (source as any).matched_keywords || source.matchedKeywords,
+      modulesEnabled: (source as any).modules_enabled || source.modulesEnabled,
+      subscriptionStatus: (source as any).subscription_status || source.subscriptionStatus,
+      businessStatus: (source as any).business_status || source.businessStatus,
+      reviews: (source as any).reviews || [],
+      offerings: (source as any).offerings || [],
+      promotions: (source as any).promotions || [],
+      photos: (source as any).photos || [],
+    } as Vendor;
   }, [vendorFromSnapshot, liveVendor]);
 
 
