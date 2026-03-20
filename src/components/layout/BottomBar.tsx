@@ -10,7 +10,7 @@ import Image from "next/image";
 const navItems = [
   { href: "/home", label: "Home", icon: "/icons/Home.svg" },
   { href: "/search", label: "Explore", icon: "/icons/Explore.svg" },
-  { href: "/favourites", label: "Zipp Hub", icon: "/icons/Zipp Hub.svg" },
+  { href: "/favourites", label: "Zipp Hub", icon: "/icons/zipp-hub.svg" },
   { href: "/profile", label: "Profile", icon: "/icons/Profile.svg" },
 ];
 
