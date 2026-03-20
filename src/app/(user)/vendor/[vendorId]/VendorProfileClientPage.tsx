@@ -304,7 +304,7 @@ export function VendorProfileClientPage({ vendorId }: { vendorId: string }) {
 
   // useDoc for fetching live, detailed data
   const vendorQuery = useMemo(
-    () => vendorId ? () => supabase.from('vendors').select('*').eq('vendor_id', vendorId).single() : () => null,
+    () => vendorId ? () => supabase.from('vendors').select('*, reviews(*)').eq('vendor_id', vendorId).single() : () => null,
     [vendorId]
   );
   const { data: liveVendor, isLoading: isLiveVendorLoading } = useSupabaseDoc<Vendor>(vendorQuery);
