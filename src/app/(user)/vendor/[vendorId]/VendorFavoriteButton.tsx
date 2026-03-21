@@ -11,68 +11,71 @@ import { useAuth } from '@/lib/auth';
 import { useSupabaseDoc } from '@/lib/supabase/hooks';
 import { supabase } from '@/lib/supabase/client';
 
-/**
- * Favorite button component that lets users save vendors to their favorites list.
- */
 export default function VendorFavoriteButton({ vendor }: { vendor: Vendor }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [saving, setSaving] = useState<boolean>(false);
+  // Local state so the heart updates instantly on tap without waiting for a re-fetch
+  const [isFavorited, setIsFavorited] = useState<boolean>(false);
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
-  // Subscribe to user's profile to get their favorites list
   const userQuery = useMemo(
     () => user ? () => supabase.from('users').select('favourites').eq('uid', user.uid).single() : () => null,
     [user]
   );
   const { data: profile, isLoading: loadingProfile } = useSupabaseDoc<ZippUser>(userQuery);
 
+  // Sync local state from fetched profile on initial load
+  useEffect(() => {
+    if (profile && !isInitialized) {
+      setIsFavorited(profile?.favourites?.includes(vendor.id) ?? false);
+      setIsInitialized(true);
+    }
+  }, [profile, vendor.id, isInitialized]);
+
   const handleToggleFavorite = async () => {
     if (!user) {
       toast({ title: 'Please log in to save favourites.', variant: 'destructive' });
       return;
     }
-    
+
     if (loadingProfile || !profile) {
       toast({ title: 'Still loading profile — try again shortly.', variant: 'info' });
       return;
     }
 
     setSaving(true);
-    const isCurrentlyFavorited = profile?.favourites?.includes(vendor.id) ?? false;
+    // Optimistically update the heart immediately
+    const newFavoritedState = !isFavorited;
+    setIsFavorited(newFavoritedState);
 
     try {
-      // Fetch current favorites
       const { data: currentUser, error: fetchError } = await supabase
         .from('users')
         .select('favourites')
         .eq('uid', user.uid)
         .single();
-      
+
       if (fetchError) throw fetchError;
 
-      // Update favorites array
-      let updatedFavourites: string[];
-      if (isCurrentlyFavorited) {
-        // Remove from favorites
-        updatedFavourites = (currentUser.favourites || []).filter((id: string) => id !== vendor.id);
-      } else {
-        // Add to favorites
-        updatedFavourites = [...(currentUser.favourites || []), vendor.id];
-      }
+      const updatedFavourites = newFavoritedState
+        ? [...(currentUser.favourites || []), vendor.id]
+        : (currentUser.favourites || []).filter((id: string) => id !== vendor.id);
 
-      // Save back to database
       const { error: updateError } = await supabase
         .from('users')
         .update({ favourites: updatedFavourites })
         .eq('uid', user.uid);
-      
+
       if (updateError) throw updateError;
 
-      toast({ 
-        title: isCurrentlyFavorited ? 'Removed from favourites' : 'Added to favourites', 
-        variant: 'success' 
+      toast({
+        title: newFavoritedState ? 'Added to favourites' : 'Removed from favourites',
+        variant: 'success',
       });
     } catch (err) {
+      // Revert optimistic update on failure
+      setIsFavorited(!newFavoritedState);
       console.error('Could not update favourites:', err);
       toast({ title: 'Could not update favourites.', variant: 'destructive' });
     } finally {
@@ -80,11 +83,9 @@ export default function VendorFavoriteButton({ vendor }: { vendor: Vendor }) {
     }
   };
 
-  if (loadingProfile && !profile) {
+  if (loadingProfile && !isInitialized) {
     return <Skeleton className="h-8 w-8 rounded-lg" />;
   }
-
-  const isFavorited = profile?.favourites?.includes(vendor.id) ?? false;
 
   return (
     <Button
