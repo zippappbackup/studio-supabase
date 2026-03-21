@@ -30,7 +30,12 @@ export default function VendorApprovalsPage() {
       .eq('subscription_status', 'claimed_pending_approval'),
     []
   );
-  const { data: vendors, isLoading } = useSupabaseCollection<Vendor>(pendingClaimsQuery);
+
+  // realtime: true so the list auto-refreshes when a vendor is approved or rejected
+  const { data: vendors, isLoading } = useSupabaseCollection<Vendor>(pendingClaimsQuery, {
+    realtime: true,
+    realtimeEvent: 'UPDATE',
+  });
 
   const filteredVendors = useMemo(() => {
     if (!vendors) return [];
@@ -62,7 +67,7 @@ export default function VendorApprovalsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="relative w-full overflow-x-auto">
+          <div className="relative w-full overflow-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -92,7 +97,6 @@ export default function VendorApprovalsPage() {
                   </TableRow>
                 )}
                 {filteredVendors?.map((vendor) => {
-                  // Handle both snake_case (from DB) and camelCase (from type)
                   const status = (vendor as any).subscription_status || vendor.subscriptionStatus || '';
                   const updatedAt = (vendor as any).updated_at || vendor.updatedAt;
 
