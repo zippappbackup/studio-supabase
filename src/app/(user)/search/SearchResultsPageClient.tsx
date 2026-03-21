@@ -11,7 +11,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { geocodeAddress } from "@/actions/geocodeActions";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
 import { logActivity } from "@/lib/activity-logger";
@@ -238,7 +237,8 @@ const SearchResultsPageClient = React.memo(function SearchResultsPageClient() {
                 const location = await getUserLocation();
                 setMapCenter(location || DEFAULT_LOCATION);
             } else if (locationFromUrl) {
-                const result = await geocodeAddress(locationFromUrl);
+                const geoResponse = await fetch(`/api/geocode?address=${encodeURIComponent(locationFromUrl)}`);
+                const result = await geoResponse.json();
                 if (result.success && result.lat && result.lng) {
                     setMapCenter([result.lat, result.lng]);
                 } else {
