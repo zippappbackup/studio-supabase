@@ -182,7 +182,6 @@ const SearchResultsPageClient = React.memo(function SearchResultsPageClient() {
     const [landmark, setLandmark] = useState<Landmark | null>(null);
     
     const [isNearbyEnabled, setIsNearbyEnabled] = useState(nearbyFromUrl);
-    const [isMapVisible, setIsMapVisible] = useState(mapFromUrl);
     
     // Infinite scroll state
     const [displayCount, setDisplayCount] = useState(INITIAL_LOAD_COUNT);
@@ -230,7 +229,6 @@ const SearchResultsPageClient = React.memo(function SearchResultsPageClient() {
 
     useEffect(() => {
         setIsNearbyEnabled(nearbyFromUrl);
-        setIsMapVisible(mapFromUrl);
         
         async function determineMapCenter() {
             if (nearbyFromUrl) {
@@ -326,7 +324,7 @@ const SearchResultsPageClient = React.memo(function SearchResultsPageClient() {
       <TooltipProvider>
           <div className="w-full">
             <div className="mt-6">
-                {isMapVisible && effectiveMapCenter && <div className="h-[400px] w-full rounded-lg overflow-hidden border my-4"><VendorMap center={effectiveMapCenter} vendors={searchResults} landmark={landmark} /></div>}
+                {mapFromUrl && effectiveMapCenter && <div className="h-[400px] w-full rounded-lg overflow-hidden border my-4"><VendorMap center={effectiveMapCenter} vendors={searchResults} landmark={landmark} /></div>}
                 
                 {isSearchActive && (
                     <h2 className="mb-4 text-2xl font-bold tracking-tight">
