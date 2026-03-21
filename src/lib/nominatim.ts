@@ -1,5 +1,4 @@
 // src/lib/nominatim.ts
-"use server";
 
 
 /**
