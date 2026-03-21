@@ -299,7 +299,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setLoading(false);
     await supabase.auth.signOut();
-    router.push('/login');
+    router.push('/welcome');
   };
 
   const sendResetEmail = async (email: string) => {
