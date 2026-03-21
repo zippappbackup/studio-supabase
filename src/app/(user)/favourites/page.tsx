@@ -36,23 +36,13 @@ import { format } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-/**
- * A robust helper to safely convert various date formats into a JS Date object.
- * Handles ISO strings, Date objects, and number (millisecond) dates.
- * Returns null if the input is invalid or cannot be parsed.
- */
 const getSafeDate = (dateInput: any): Date | null => {
     if (!dateInput) return null;
-    if (dateInput instanceof Date) {
-        return dateInput;
-    }
+    if (dateInput instanceof Date) return dateInput;
     const date = new Date(dateInput);
-    if (!isNaN(date.getTime())) {
-        return date;
-    }
+    if (!isNaN(date.getTime())) return date;
     return null;
 };
-
 
 function FavouriteVendorCard({ vendor, onRemove }: { vendor: Vendor; onRemove: (vendorId: string) => void; }) {
   const logoUrl = getLogoUrl(vendor);
@@ -94,7 +84,6 @@ function FavouriteVendorCard({ vendor, onRemove }: { vendor: Vendor; onRemove: (
                             </Tooltip>
                         )}
                     </div>
-                    
                     <div className="flex items-center gap-1.5 flex-wrap mt-1 text-xs text-muted-foreground">
                       {displayCategory && <span className="capitalize font-medium text-accent">{displayCategory}</span>}
                       {displayCategory && vendorKeywords.length > 0 && <span className="mx-1">|</span>}
@@ -105,8 +94,7 @@ function FavouriteVendorCard({ vendor, onRemove }: { vendor: Vendor; onRemove: (
                         </React.Fragment>
                       ))}
                     </div>
-
-                     <p className="text-xs text-foreground mt-1 truncate">{vendor.address}</p>
+                    <p className="text-xs text-foreground mt-1 truncate">{vendor.address}</p>
                 </div>
                 <div className="flex flex-col items-end gap-0 text-sm shrink-0">
                     {rating ? (
@@ -147,8 +135,37 @@ function FavouritesList() {
   const { toast } = useToast();
   const { vendorDataset, isVendorDataReady } = useAppCache();
 
-  // Directly use the favourite IDs from the authenticated user object.
-  const favouriteIds = user?.favourites || [];
+  const [favouriteIds, setFavouriteIds] = useState<string[]>([]);
+  const [isFavouritesLoading, setIsFavouritesLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) {
+      setFavouriteIds([]);
+      setIsFavouritesLoading(false);
+      return;
+    }
+
+    const fetchFavourites = async () => {
+      setIsFavouritesLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('favourites')
+          .eq('uid', user.uid)
+          .single();
+
+        if (error) throw error;
+        setFavouriteIds(data?.favourites || []);
+      } catch (error) {
+        console.error('Error fetching favourites:', error);
+        setFavouriteIds([]);
+      } finally {
+        setIsFavouritesLoading(false);
+      }
+    };
+
+    fetchFavourites();
+  }, [user]);
 
   const favoriteVendors = useMemo(() => {
     if (!isVendorDataReady || !vendorDataset || favouriteIds.length === 0) {
@@ -162,25 +179,24 @@ function FavouritesList() {
     if (!user) return;
 
     try {
-        // Fetch current user data
         const { data: currentUser, error: fetchError } = await supabase
             .from('users')
             .select('favourites')
-            .eq('id', user.uid)
+            .eq('uid', user.uid)
             .single();
         
         if (fetchError) throw fetchError;
 
-        // Remove vendorId from favourites array
         const updatedFavourites = (currentUser.favourites || []).filter((id: string) => id !== vendorId);
 
-        // Update user with new favourites array
         const { error: updateError } = await supabase
             .from('users')
             .update({ favourites: updatedFavourites })
-            .eq('id', user.uid);
+            .eq('uid', user.uid);
         
         if (updateError) throw updateError;
+
+        setFavouriteIds(updatedFavourites);
 
         toast({
             title: "Removed from Favourites",
@@ -195,7 +211,7 @@ function FavouritesList() {
     }
   };
 
-  const isLoading = isUserLoading || !isVendorDataReady;
+  const isLoading = isUserLoading || isFavouritesLoading || !isVendorDataReady;
 
   if (isLoading) {
     return (
@@ -235,11 +251,7 @@ interface PromotionCardProps {
   onUncollect: () => void;
 }
 
-function PromotionCard({ 
-    collection, 
-    onRedeem, 
-    onUncollect
-}: PromotionCardProps) {
+function PromotionCard({ collection, onRedeem, onUncollect }: PromotionCardProps) {
   const [vendorName, setVendorName] = useState<string | null>(null);
   const promotion = collection.promotion;
 
@@ -252,11 +264,8 @@ function PromotionCard({
                     .select('name')
                     .eq('vendor_id', promotion.vendorId)
                     .single();
-                
                 if (error) throw error;
-                if (data) {
-                    setVendorName(data.name);
-                }
+                if (data) setVendorName(data.name);
             } catch (error) {
                 console.error("Error fetching vendor name for promo card:", error);
             }
@@ -292,14 +301,11 @@ function PromotionCard({
       </CardContent>
       <CardFooter className="grid grid-cols-2 gap-2">
           <Button onClick={onRedeem} className="w-full">Redeem Now</Button>
-          <Button onClick={onUncollect} className="w-full">
-              Remove
-          </Button>
+          <Button onClick={onUncollect} className="w-full">Remove</Button>
       </CardFooter>
     </Card>
   );
 }
-
 
 function PromotionsList() {
     const { user: userData, loading: isUserLoading } = useAuth();
@@ -307,7 +313,6 @@ function PromotionsList() {
     
     const [collectedPromotions, setCollectedPromotions] = useState<(UserCollection & { promotion: Promotion })[]>([]);
     const [isLoadingPromos, setIsLoadingPromos] = useState(true);
-
     const [promotionToRedeem, setPromotionToRedeem] = useState<UserCollection & { promotion: Promotion } | null>(null);
     const [promotionToUncollect, setPromotionToUncollect] = useState<UserCollection & { promotion: Promotion } | null>(null);
     
@@ -316,26 +321,34 @@ function PromotionsList() {
             if (!userData) {
                 setIsLoadingPromos(false);
                 return;
-            };
+            }
 
             setIsLoadingPromos(true);
-            const userCollectedRefs = userData.collectedPromotions || [];
+
+            const { data: freshUser, error: userError } = await supabase
+                .from('users')
+                .select('collected_promotions')
+                .eq('uid', userData.uid)
+                .single();
+
+            if (userError || !freshUser) {
+                setIsLoadingPromos(false);
+                return;
+            }
+
+            const userCollectedRefs: UserCollection[] = freshUser.collected_promotions || [];
             
             const promotionPromises = userCollectedRefs.map(async (collectionRef) => {
                 try {
                     const { data: vendorData, error } = await supabase
                         .from('vendors')
-                        .select('*')
+                        .select('promotions')
                         .eq('vendor_id', collectionRef.vendorId)
                         .single();
-                    
                     if (error) throw error;
-                    
                     if (vendorData) {
                         const promotion = vendorData.promotions?.find((p: Promotion) => p.id === collectionRef.promotionId);
-                        if (promotion) {
-                            return { ...collectionRef, promotion };
-                        }
+                        if (promotion) return { ...collectionRef, promotion };
                     }
                 } catch (e) {
                     console.error(`Failed to fetch vendor ${collectionRef.vendorId}`, e);
@@ -351,83 +364,53 @@ function PromotionsList() {
         };
 
         fetchLivePromotions();
-
     }, [userData]);
-
-
-    const handleRedeem = (collection: UserCollection & { promotion: Promotion }) => {
-        setPromotionToRedeem(collection);
-    };
-
-    const handleUncollect = (collection: UserCollection & { promotion: Promotion }) => {
-        setPromotionToUncollect(collection);
-    };
 
     const confirmRedeem = async () => {
         if (!promotionToRedeem || !userData) return;
-
         toast({ title: "Processing Redemption", description: "Please wait...", variant: "info" });
-        
         try {
-            // Fetch current user data
             const { data: currentUser, error: userFetchError } = await supabase
                 .from('users')
                 .select('collected_promotions')
-                .eq('id', userData.uid)
+                .eq('uid', userData.uid)
                 .single();
-            
             if (userFetchError) throw userFetchError;
 
-            // Fetch current vendor data
             const { data: currentVendor, error: vendorFetchError } = await supabase
                 .from('vendors')
                 .select('promotions')
                 .eq('vendor_id', promotionToRedeem.vendorId)
                 .single();
-            
             if (vendorFetchError) throw vendorFetchError;
 
             const currentCollections = (currentUser.collected_promotions || []) as UserCollection[];
-            const collectionToRemove = currentCollections.find(c => c.redemptionId === promotionToRedeem.redemptionId);
-
-            if (!collectionToRemove) {
-                console.log("Could not find promotion to redeem in user's collection.");
-                return; 
-            }
-
-            // Remove from user's collected promotions
             const updatedCollections = currentCollections.filter(c => c.redemptionId !== promotionToRedeem.redemptionId);
 
-            // Update user
             const { error: userUpdateError } = await supabase
                 .from('users')
                 .update({ collected_promotions: updatedCollections })
-                .eq('id', userData.uid);
-            
+                .eq('uid', userData.uid);
             if (userUpdateError) throw userUpdateError;
             
-            // Update vendor promotion redemptions
             const newPromotions = [...(currentVendor.promotions || [])];
             const promoIndex = newPromotions.findIndex((p: Promotion) => p.id === promotionToRedeem.promotionId);
-
             if (promoIndex > -1) {
                 const existingRedemptions = newPromotions[promoIndex].redemptions || [];
                 const redemptionEventIndex = existingRedemptions.findIndex(r => r.redemptionId === promotionToRedeem.redemptionId);
-                
                 if (redemptionEventIndex > -1) {
                     existingRedemptions[redemptionEventIndex].status = 'redeemed';
                     existingRedemptions[redemptionEventIndex].redeemedAt = new Date();
                     newPromotions[promoIndex].redemptions = existingRedemptions;
-                    
                     const { error: vendorUpdateError } = await supabase
                         .from('vendors')
                         .update({ promotions: newPromotions })
                         .eq('vendor_id', promotionToRedeem.vendorId);
-                    
                     if (vendorUpdateError) throw vendorUpdateError;
                 }
             }
 
+            setCollectedPromotions(prev => prev.filter(c => c.redemptionId !== promotionToRedeem.redemptionId));
             toast({ title: "Promotion Redeemed!", variant: "success" });
         } catch (error: any) {
             toast({ title: "Redemption Failed", description: error.message, variant: "destructive" });
@@ -438,66 +421,51 @@ function PromotionsList() {
     
     const confirmUncollect = async () => {
         if (!promotionToUncollect || !userData) return;
-        
         toast({ title: "Removing Promotion", description: "Please wait...", variant: "info" });
         try {
-            // Fetch current user data
             const { data: currentUser, error: userFetchError } = await supabase
                 .from('users')
                 .select('collected_promotions')
-                .eq('id', userData.uid)
+                .eq('uid', userData.uid)
                 .single();
-            
             if (userFetchError) throw userFetchError;
 
-            // Fetch current vendor data
             const { data: currentVendor, error: vendorFetchError } = await supabase
                 .from('vendors')
                 .select('promotions')
                 .eq('vendor_id', promotionToUncollect.vendorId)
                 .single();
-            
             if (vendorFetchError) throw vendorFetchError;
             
             const currentCollections = (currentUser.collected_promotions || []) as UserCollection[];
-            const collectionToRemove = currentCollections.find(c => c.redemptionId === promotionToUncollect.redemptionId);
-
-            if (!collectionToRemove) return;
-
-            // Remove from user's collected promotions
             const updatedCollections = currentCollections.filter(c => c.redemptionId !== promotionToUncollect.redemptionId);
 
-            // Update user
             const { error: userUpdateError } = await supabase
                 .from('users')
                 .update({ collected_promotions: updatedCollections })
-                .eq('id', userData.uid);
-            
+                .eq('uid', userData.uid);
             if (userUpdateError) throw userUpdateError;
 
-            // Update vendor promotions
             const newPromotions = [...(currentVendor.promotions || [])];
             const promoIndex = newPromotions.findIndex((p: Promotion) => p.id === promotionToUncollect.promotionId);
-
             if (promoIndex > -1) {
                 const existingRedemptions = newPromotions[promoIndex].redemptions || [];
                 newPromotions[promoIndex].redemptions = existingRedemptions.filter(r => r.redemptionId !== promotionToUncollect.redemptionId);
-                
                 const { error: vendorUpdateError } = await supabase
                     .from('vendors')
                     .update({ promotions: newPromotions })
                     .eq('vendor_id', promotionToUncollect.vendorId);
-                
                 if (vendorUpdateError) throw vendorUpdateError;
             }
 
+            setCollectedPromotions(prev => prev.filter(c => c.redemptionId !== promotionToUncollect.redemptionId));
             toast({ title: "Promotion Removed", description: "This promotion has been removed from your collection.", variant: "success" });
         } catch (error: any) {
              toast({ title: "Failed to Remove", description: error.message, variant: "destructive" });
         } finally {
             setPromotionToUncollect(null);
         }
-    }
+    };
 
     if (isLoadingPromos || isUserLoading) {
         return (
@@ -520,18 +488,16 @@ function PromotionsList() {
     return (
         <>
         <div className="space-y-8">
-            {collectedPromotions.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {collectedPromotions.map(collection => (
-                        <PromotionCard
-                            key={`${collection.promotionId}-${new Date(collection.collectedAt).getTime()}`}
-                            collection={collection}
-                            onRedeem={() => handleRedeem(collection)}
-                            onUncollect={() => handleUncollect(collection)}
-                        />
-                    ))}
-                </div>
-            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {collectedPromotions.map(collection => (
+                    <PromotionCard
+                        key={`${collection.promotionId}-${new Date(collection.collectedAt).getTime()}`}
+                        collection={collection}
+                        onRedeem={() => setPromotionToRedeem(collection)}
+                        onUncollect={() => setPromotionToUncollect(collection)}
+                    />
+                ))}
+            </div>
         </div>
 
         <AlertDialog open={!!promotionToRedeem} onOpenChange={() => setPromotionToRedeem(null)}>
@@ -539,14 +505,12 @@ function PromotionsList() {
             <AlertDialogHeader>
                 <AlertDialogTitle>Confirm Redemption</AlertDialogTitle>
                 <AlertDialogDescription>
-                You are about to redeem the promotion: <span className="font-bold">"{promotionToRedeem?.promotion.title}"</span>. This action is permanent and cannot be undone.
+                You are about to redeem: <span className="font-bold">"{promotionToRedeem?.promotion.title}"</span>. This action is permanent and cannot be undone.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={confirmRedeem}>
-                Redeem Now
-                </AlertDialogAction>
+                <AlertDialogAction onClick={confirmRedeem}>Redeem Now</AlertDialogAction>
             </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
