@@ -35,7 +35,7 @@ export default function VendorApprovalsPage() {
   const filteredVendors = useMemo(() => {
     if (!vendors) return [];
     if (!searchQuery) return vendors;
-    return vendors.filter(vendor => 
+    return vendors.filter(vendor =>
       vendor.name?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [vendors, searchQuery]);
@@ -53,7 +53,7 @@ export default function VendorApprovalsPage() {
           <CardDescription>A list of businesses claimed by users that are awaiting your approval.</CardDescription>
           <div className="relative pt-4">
             <Search className="absolute left-3 top-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
+            <Input
               placeholder="Search by vendor name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -91,31 +91,33 @@ export default function VendorApprovalsPage() {
                     </TableCell>
                   </TableRow>
                 )}
-                {filteredVendors?.map((vendor) => (
-                  <TableRow key={vendor.id}>
-                    <TableCell className="font-medium">{vendor.name}</TableCell>
-                    <TableCell>{vendor.email}</TableCell>
-                    <TableCell>{vendor.region}</TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant={vendor.subscriptionStatus === 'claimed_pending_approval' ? "default" : "destructive"} 
-                        className={cn("capitalize", vendor.subscriptionStatus === 'claimed_pending_approval' && "bg-amber-500/80 text-white")}
-                      >
-                        {vendor.subscriptionStatus.replace(/_/g, " ")}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {vendor.updatedAt &&
-                        format(
-                          new Date(vendor.updatedAt),
-                          "dd MMM yyyy"
-                        )}
-                    </TableCell>
-                    <TableCell>
-                      <VendorActions vendor={vendor} />
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {filteredVendors?.map((vendor) => {
+                  // Handle both snake_case (from DB) and camelCase (from type)
+                  const status = (vendor as any).subscription_status || vendor.subscriptionStatus || '';
+                  const updatedAt = (vendor as any).updated_at || vendor.updatedAt;
+
+                  return (
+                    <TableRow key={vendor.id}>
+                      <TableCell className="font-medium">{vendor.name}</TableCell>
+                      <TableCell>{vendor.email}</TableCell>
+                      <TableCell>{vendor.region}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={status === 'claimed_pending_approval' ? "default" : "destructive"}
+                          className={cn("capitalize", status === 'claimed_pending_approval' && "bg-amber-500/80 text-white")}
+                        >
+                          {status.replace(/_/g, " ")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {updatedAt && format(new Date(updatedAt), "dd MMM yyyy")}
+                      </TableCell>
+                      <TableCell>
+                        <VendorActions vendor={vendor} />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>

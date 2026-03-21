@@ -17,24 +17,25 @@ export function VendorActions({ vendor }: { vendor: Vendor }) {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
 
+    // Handle both snake_case (from DB) and camelCase (from type)
+    const vendorId = (vendor as any).vendor_id || vendor.id;
+    const status = (vendor as any).subscription_status || vendor.subscriptionStatus || '';
+
     const handleApprove = async () => {
         setIsLoading(true);
         try {
-            // Fetch current vendor to get existing modules
             const { data: currentVendor, error: fetchError } = await supabase
                 .from('vendors')
                 .select('modules_enabled')
-                .eq('vendor_id', vendor.id)
+                .eq('vendor_id', vendorId)
                 .single();
             
             if (fetchError) throw fetchError;
 
-            // Merge new modules with existing ones (avoiding duplicates)
             const existingModules = currentVendor.modules_enabled || [];
             const newModules = ["offerings", "promotions", "reviews"];
             const mergedModules = [...new Set([...existingModules, ...newModules])];
 
-            // Update vendor status and modules
             const { error: updateError } = await supabase
                 .from('vendors')
                 .update({
@@ -42,7 +43,7 @@ export function VendorActions({ vendor }: { vendor: Vendor }) {
                     updated_at: new Date().toISOString(),
                     modules_enabled: mergedModules,
                 })
-                .eq('vendor_id', vendor.id);
+                .eq('vendor_id', vendorId);
             
             if (updateError) throw updateError;
 
@@ -74,7 +75,7 @@ export function VendorActions({ vendor }: { vendor: Vendor }) {
                     claimed_by: null,
                     updated_at: new Date().toISOString(),
                 })
-                .eq('vendor_id', vendor.id);
+                .eq('vendor_id', vendorId);
             
             if (error) throw error;
 
@@ -83,8 +84,8 @@ export function VendorActions({ vendor }: { vendor: Vendor }) {
                 description: `The claim for "${vendor.name}" has been rejected.`,
             });
         } catch (error) {
-             console.error("Error rejecting vendor:", error);
-             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+            console.error("Error rejecting vendor:", error);
+            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
             toast({
                 title: "Error Rejecting Claim",
                 description: errorMessage,
@@ -96,7 +97,7 @@ export function VendorActions({ vendor }: { vendor: Vendor }) {
     };
 
     // Only show actions if the status is 'claimed_pending_approval'
-    if (vendor.subscriptionStatus !== 'claimed_pending_approval') {
+    if (status !== 'claimed_pending_approval') {
         return null;
     }
 
