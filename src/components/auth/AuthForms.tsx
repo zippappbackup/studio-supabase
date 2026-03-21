@@ -663,8 +663,12 @@ export function AuthForm({ type, vendorToClaim: vendorProp }: { type: "login" | 
                   <h2 className="text-lg font-semibold leading-none tracking-tight">Login Credentials</h2>
                 </div>
                 <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Login Email</Label>
                     <Input id="email" type="email" value={email} onChange={handleEmailChange} required />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password</Label>
                     <div className="relative">
                       <Input id="password" type={showPassword ? "text" : "password"} value={password} onChange={handlePasswordChange} required />
                       <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground" onClick={() => setShowPassword(!showPassword)}>
@@ -672,6 +676,8 @@ export function AuthForm({ type, vendorToClaim: vendorProp }: { type: "login" | 
                       </Button>
                     </div>
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirm Password</Label>
                     <div className="relative">
                       <Input id="confirmPassword" type={showPassword ? "text" : "password"} value={confirmPassword} onChange={handleConfirmPasswordChange} required />
                       <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground" onClick={() => setShowPassword(!showPassword)}>
