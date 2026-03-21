@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { useSupabaseDoc } from '@/lib/supabase/hooks';
+import { useSupabaseDoc, useSupabaseCollection } from '@/lib/supabase/hooks';
 import { supabase } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Loader2, Navigation, ArrowLeft, Star, FileText, Phone, MapPin, Globe, ChevronDown, X, ShieldCheck } from 'lucide-react';
@@ -304,10 +304,17 @@ export function VendorProfileClientPage({ vendorId }: { vendorId: string }) {
 
   // useDoc for fetching live, detailed data
   const vendorQuery = useMemo(
-    () => vendorId ? () => supabase.from('vendors').select('*, reviews(*)').eq('vendor_id', vendorId).single() : () => null,
+    () => vendorId ? () => supabase.from('vendors').select('*').eq('vendor_id', vendorId).single() : () => null,
     [vendorId]
   );
   const { data: liveVendor, isLoading: isLiveVendorLoading } = useSupabaseDoc<Vendor>(vendorQuery);
+
+  // Fetch reviews separately to avoid 406 errors from PostgREST join
+  const reviewsQuery = useMemo(
+    () => vendorId ? () => supabase.from('reviews').select('*').eq('vendor_id', vendorId) : () => null,
+    [vendorId]
+  );
+  const { data: vendorReviews } = useSupabaseCollection<any>(reviewsQuery);
 
   const [editingReview, setEditingReview] = useState<Review | undefined>(undefined);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -360,7 +367,7 @@ export function VendorProfileClientPage({ vendorId }: { vendorId: string }) {
       modulesEnabled: (source as any).modules_enabled || source.modulesEnabled,
       subscriptionStatus: (source as any).subscription_status || source.subscriptionStatus,
       businessStatus: (source as any).business_status || source.businessStatus,
-      reviews: (source as any).reviews || [],
+      reviews: vendorReviews || (source as any).reviews || [],
       offerings: (source as any).offerings || [],
       promotions: (source as any).promotions || [],
       photos: (source as any).photos || [],

@@ -22,7 +22,7 @@ async function ensureConfigIsLoaded(supabase: SupabaseClient) {
         const { data: configData, error } = await supabase
             .from('admin_config')
             .select('activity_log_config')
-            .eq('id', 'global')
+            .eq('config_key', 'singleton')
             .single();
         
         if (error) throw error;
