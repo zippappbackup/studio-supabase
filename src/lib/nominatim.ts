@@ -1,7 +1,6 @@
 // src/lib/nominatim.ts
 "use server";
 
-import fetch from 'node-fetch';
 
 /**
  * Geocodes an address using the free Nominatim API.

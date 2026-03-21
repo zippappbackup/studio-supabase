@@ -250,7 +250,6 @@ export function AuthForm({ type, vendorToClaim: vendorProp }: { type: "login" | 
   const [gender, setGender] = useState<'male' | 'female' | 'other' | "prefer_not_to_say">();
   const [profession, setProfession] = useState("");
   const [addressLine1, setAddressLine1] = useState("");
-  const [addressLine2, setAddressLine2] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [country, setCountry] = useState("");
 
@@ -386,7 +385,6 @@ export function AuthForm({ type, vendorToClaim: vendorProp }: { type: "login" | 
     try {
       const address = {
         line1: addressLine1,
-        line2: addressLine2,
         postalCode: postalCode,
         country: country,
       };
@@ -443,7 +441,6 @@ export function AuthForm({ type, vendorToClaim: vendorProp }: { type: "login" | 
   const handleProfessionChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => setProfession(e.target.value), []);
   const handleCountryChange = useCallback((value: string) => setCountry(value), []);
   const handleAddressLine1Change = useCallback((e: React.ChangeEvent<HTMLInputElement>) => setAddressLine1(e.target.value), []);
-  const handleAddressLine2Change = useCallback((e: React.ChangeEvent<HTMLInputElement>) => setAddressLine2(e.target.value), []);
   const handlePostalCodeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => setPostalCode(e.target.value), []);
   const handleAgreeToPrivacy = () => { setIsPrivacyAgreed(true); setIsPrivacyDialogOpen(false); };
   const handlePrivacyCheckChange = (checked: boolean | 'indeterminate') => {
@@ -638,14 +635,10 @@ export function AuthForm({ type, vendorToClaim: vendorProp }: { type: "login" | 
                     <Separator />
                     <p className="text-sm font-medium pt-2">Address</p>
                     <div className="space-y-2">
-                      <Input id="addressLine1" value={addressLine1} onChange={handleAddressLine1Change} placeholder="Address Line 1" required />
+                      <Input id="addressLine1" value={addressLine1} onChange={handleAddressLine1Change} placeholder="Address (e.g. Blk 123, Ang Mo Kio Ave 3, #04-56)" required />
                     </div>
-                    <div className="space-y-2">
-                      <Input id="addressLine2" value={addressLine2} onChange={handleAddressLine2Change} placeholder="Address Line 2 (Optional)" />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Combobox
                           options={countryOptions}
                           value={country}
                           onChange={handleCountryChange}
@@ -654,8 +647,6 @@ export function AuthForm({ type, vendorToClaim: vendorProp }: { type: "login" | 
                           noResultsMessage="No country found."
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Input id="postalCode" value={postalCode} onChange={handlePostalCodeChange} placeholder="Postal Code" required />
                       </div>
                     </div>
                   </div>
@@ -669,12 +660,8 @@ export function AuthForm({ type, vendorToClaim: vendorProp }: { type: "login" | 
                   <h2 className="text-lg font-semibold leading-none tracking-tight">Login Credentials</h2>
                 </div>
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Login Email</Label>
                     <Input id="email" type="email" value={email} onChange={handleEmailChange} required />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
                     <div className="relative">
                       <Input id="password" type={showPassword ? "text" : "password"} value={password} onChange={handlePasswordChange} required />
                       <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground" onClick={() => setShowPassword(!showPassword)}>
@@ -682,8 +669,6 @@ export function AuthForm({ type, vendorToClaim: vendorProp }: { type: "login" | 
                       </Button>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Re-type Password</Label>
                     <div className="relative">
                       <Input id="confirmPassword" type={showPassword ? "text" : "password"} value={confirmPassword} onChange={handleConfirmPasswordChange} required />
                       <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground" onClick={() => setShowPassword(!showPassword)}>
