@@ -230,30 +230,25 @@ const SearchResultsPageClient = React.memo(function SearchResultsPageClient() {
     useEffect(() => {
         setIsNearbyEnabled(nearbyFromUrl);
         
-        async function determineMapCenter() {
+        async function determineMapCenterAndFilter() {
+            let center: [number, number] = DEFAULT_LOCATION;
+
             if (nearbyFromUrl) {
                 const location = await getUserLocation();
-                setMapCenter(location || DEFAULT_LOCATION);
+                center = location || DEFAULT_LOCATION;
             } else if (locationFromUrl) {
                 const geoResponse = await fetch(`/api/geocode?address=${encodeURIComponent(locationFromUrl)}`);
                 const result = await geoResponse.json();
                 if (result.success && result.lat && result.lng) {
-                    setMapCenter([result.lat, result.lng]);
-                } else {
-                    setMapCenter(DEFAULT_LOCATION);
+                    center = [result.lat, result.lng];
                 }
-            } else {
-                setMapCenter(DEFAULT_LOCATION);
             }
-        }
-        determineMapCenter();
 
-    }, [locationFromUrl, nearbyFromUrl, getUserLocation]);
+            setMapCenter(center);
 
-    useEffect(() => {
-        if (!isVendorDataReady || !mapCenter || !fuse) {
-            return;
-        }
+            if (!isVendorDataReady || !fuse) {
+                return;
+            }
 
         let baseResults: Vendor[];
         
@@ -280,7 +275,7 @@ const SearchResultsPageClient = React.memo(function SearchResultsPageClient() {
 
         if (isNearbyEnabled || locationFromUrl) {
             filteredResults.forEach(v => {
-                v.distance = v.lat && v.lng ? haversine(mapCenter[0], mapCenter[1], v.lat, v.lng) : undefined;
+                v.distance = v.lat && v.lng ? haversine(center[0], center[1], v.lat, v.lng) : undefined;
             });
             filteredResults = filteredResults.filter(v => v.distance !== undefined && v.distance <= 3);
             filteredResults.sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
@@ -291,7 +286,10 @@ const SearchResultsPageClient = React.memo(function SearchResultsPageClient() {
         setSearchResults(filteredResults);
         setDisplayCount(INITIAL_LOAD_COUNT);
 
-    }, [keywordFromUrl, categoryFromUrl, locationFromUrl, promotionsFromUrl, topRatedFromUrl, fuse, mapCenter, vendorDataset, isNearbyEnabled, isVendorDataReady, vendorIdsWithActivePromos]);
+        }
+        determineMapCenterAndFilter();
+
+    }, [keywordFromUrl, categoryFromUrl, locationFromUrl, nearbyFromUrl, promotionsFromUrl, topRatedFromUrl, fuse, vendorDataset, isNearbyEnabled, isVendorDataReady, vendorIdsWithActivePromos, getUserLocation]);
 
     useEffect(() => {
         if (isLoading) return;
