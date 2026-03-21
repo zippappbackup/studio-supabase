@@ -25,35 +25,28 @@ export default function VendorLayout({
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
-  const vendorId = user?.vendorId || user?.uid;
+  // vendor_id comes back from DB as snake_case so also check vendor_id directly
+  const vendorId = (user as any)?.vendor_id || user?.vendorId || user?.uid;
   
   const vendorQuery = useMemo(
-    () => vendorId ? () => supabase.from('vendors').select('*').eq('vendor_id', vendorId).single() : () => null,
+    () => vendorId ? () => supabase.from('vendors').select('subscription_status, claimed_by').eq('vendor_id', vendorId).single() : () => null,
     [vendorId]
   );
   const { data: vendor, isLoading: isVendorLoading } = useSupabaseDoc<Vendor>(vendorQuery);
 
   useEffect(() => {
-    // Skip auth checks if in Lighthouse audit mode
     if (isLighthouseAuditMode) return;
-    
-    // This effect now robustly handles role checks after loading is complete.
     if (!authLoading) {
       if (!user) {
-         // If no user is found after loading, redirect to landing.
         router.replace("/welcome");
       } else if (user.role && user.role !== "vendor") {
-        // If a user with a non-vendor role (e.g., user, admin) ends up here,
-        // redirect them to the root to be correctly routed.
-        router.replace("/"); 
+        router.replace("/");
       }
     }
   }, [user, authLoading, router]);
 
-  const isLoading = authLoading || isVendorLoading;
-
-  // Show loading spinner for normal users, but bypass for Lighthouse
-  if (!isLighthouseAuditMode && (isLoading || !user || user.role !== 'vendor')) {
+  // Still loading auth or vendor data — show spinner
+  if (!isLighthouseAuditMode && (authLoading || isVendorLoading)) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -61,26 +54,36 @@ export default function VendorLayout({
     );
   }
 
-  // If vendor claim is pending, show the dedicated approval page. (Bypass for Lighthouse)
-  if (!isLighthouseAuditMode && vendor?.subscriptionStatus === 'claimed_pending_approval') {
+  // Not logged in or wrong role — let the useEffect redirect handle it,
+  // show spinner in the meantime
+  if (!isLighthouseAuditMode && (!user || user.role !== 'vendor')) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Vendor is pending approval — block access and show pending page
+  if (!isLighthouseAuditMode && ((vendor as any)?.subscription_status ?? vendor?.subscriptionStatus) === 'claimed_pending_approval') {
     return <PendingApprovalPage />;
   }
-  
-  // Render the main layout for authenticated vendors or for Lighthouse audits.
+
+  // Render the main vendor layout
   return (
-      <SidebarProvider>
-        <div className="flex h-screen w-full">
-          <VendorSidebar />
-          <div className="flex flex-1 flex-col overflow-hidden">
-            <Header>
-              <MobileSidebarToggle />
-            </Header>
-            <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 pb-24">
-                {children}
-            </main>
-          </div>
-          <BottomBar />
+    <SidebarProvider>
+      <div className="flex h-screen w-full">
+        <VendorSidebar />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <Header>
+            <MobileSidebarToggle />
+          </Header>
+          <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 pb-24">
+            {children}
+          </main>
         </div>
-      </SidebarProvider>
+        <BottomBar />
+      </div>
+    </SidebarProvider>
   );
 }
