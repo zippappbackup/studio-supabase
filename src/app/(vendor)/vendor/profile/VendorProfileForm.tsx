@@ -26,7 +26,6 @@ import { PlaceholderImages } from "@/lib/placeholder-images";
 import { getLogoUrl } from "@/lib/utils";
 import { useAppCache } from "@/context/AppCacheProvider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { geocodeAddress } from "@/actions/geocodeActions";
 
 interface VendorProfileFormProps {
     onPublicViewClick: () => void;
@@ -160,7 +159,8 @@ export function VendorProfileForm({ onPublicViewClick }: VendorProfileFormProps)
         setIsGeocoding(true);
         toast({ title: "Locating Address...", description: "Please wait a moment." });
         try {
-            const result = await geocodeAddress(vendor.address);
+            const response = await fetch(`/api/geocode?address=${encodeURIComponent(vendor.address!)}`);
+            const result = await response.json();
             if (result.success && result.lat && result.lng && result.address) {
                 setVendor(prev => ({ ...prev, address: result.address, lat: result.lat, lng: result.lng }));
                 toast({ title: "Location Found!", description: "Address and coordinates have been updated.", variant: "success" });
