@@ -637,8 +637,9 @@ export function AuthForm({ type, vendorToClaim: vendorProp }: { type: "login" | 
                     <div className="space-y-2">
                       <Input id="addressLine1" value={addressLine1} onChange={handleAddressLine1Change} placeholder="Address (e.g. Blk 123, Ang Mo Kio Ave 3, #04-56)" required />
                     </div>
-                    </div>
                     <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Combobox
                           options={countryOptions}
                           value={country}
                           onChange={handleCountryChange}
@@ -647,6 +648,8 @@ export function AuthForm({ type, vendorToClaim: vendorProp }: { type: "login" | 
                           noResultsMessage="No country found."
                         />
                       </div>
+                      <div className="space-y-2">
+                        <Input id="postalCode" value={postalCode} onChange={handlePostalCodeChange} placeholder="Postal Code" required />
                       </div>
                     </div>
                   </div>
