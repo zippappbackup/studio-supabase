@@ -33,6 +33,8 @@ interface AuthContextType {
       address: Address;
       companyName?: string;
       claimedVendorId?: string | null;
+      lat?: number | null;
+      lng?: number | null;
       dob: string | null;
       gender: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null;
       profession: string | null;
@@ -229,7 +231,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           normalized_name: (data.companyName || data.name)?.toLowerCase(),
           email,
           phone: data.phone,
-          address: data.address.line1,
+          address: `${data.address.line1}, Singapore ${data.address.postalCode}`,
+          lat: data.lat || null,
+          lng: data.lng || null,
           category_id: '',
           subscription_status: 'claimed_pending_approval',
           claimed_by: userId,

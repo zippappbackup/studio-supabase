@@ -252,6 +252,8 @@ export function AuthForm({ type, vendorToClaim: vendorProp }: { type: "login" | 
   const [addressLine1, setAddressLine1] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [country, setCountry] = useState("");
+  const [signupLat, setSignupLat] = useState<number | null>(null);
+  const [signupLng, setSignupLng] = useState<number | null>(null);
 
   const initialRole = searchParams.get('role') === 'vendor' ? 'vendor' : 'user';
   const [role, setRole] = useState<'user' | 'vendor'>(initialRole);
@@ -383,6 +385,23 @@ export function AuthForm({ type, vendorToClaim: vendorProp }: { type: "login" | 
 
     setIsSubmitting(true);
     try {
+      // Geocode the address on signup so lat/lng are stored immediately
+      let lat: number | null = null;
+      let lng: number | null = null;
+      if (addressLine1 && postalCode) {
+        try {
+          const cleanAddress = `${addressLine1}, Singapore ${postalCode}`.replace(/#[0-9]+-[0-9A-Za-z]+,?\s*/g, '').trim();
+          const geoResponse = await fetch(`/api/geocode?address=${encodeURIComponent(cleanAddress)}`);
+          const geoResult = await geoResponse.json();
+          if (geoResult.success) {
+            lat = geoResult.lat;
+            lng = geoResult.lng;
+          }
+        } catch (geoError) {
+          console.warn('Geocoding failed during signup, coordinates will be set later:', geoError);
+        }
+      }
+
       const address = {
         line1: addressLine1,
         postalCode: postalCode,
@@ -399,6 +418,8 @@ export function AuthForm({ type, vendorToClaim: vendorProp }: { type: "login" | 
         address,
         companyName,
         claimedVendorId: vendorToClaim?.id,
+        lat,
+        lng,
         dob: dobString,
         gender: finalGender,
         profession: finalProfession,
