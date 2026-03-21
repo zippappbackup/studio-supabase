@@ -91,6 +91,7 @@ export function VendorMap({ center, vendors, landmark }: VendorMapProps) {
     const map = mapInstance.current;
     if (!map) return;
 
+    map.invalidateSize();
     map.setView(center, 14);
 
     if (centerMarker.current) {
