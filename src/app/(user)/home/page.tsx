@@ -65,6 +65,14 @@ function ZippHighlights() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {visibleHighlights.map((vendor) => {
                     const logoUrl = getLogoUrl(vendor);
+                    const isCategoryIcon = logoUrl.endsWith('.svg');
+                    const categoryColors: { [key: string]: string } = {
+                        'car care': 'bg-amber-100',
+                        'cleaning services': 'bg-blue-100',
+                        'handyman services': 'bg-green-100',
+                        'mobile device repair': 'bg-purple-100',
+                    };
+                    const iconBg = categoryColors[(vendor.categoryId || '').toLowerCase()] || 'bg-primary/10';
                     const rating = vendor.zippRating || vendor.googleRating;
                     const reviewCount = vendor.zippReviewCount || vendor.googleReviewCount;
                     const displayCategory = vendor.categoryId
@@ -81,15 +89,28 @@ function ZippHighlights() {
                               className="flex flex-col h-full items-start p-4 border border-border"
                             >
                                 <div className="flex items-start gap-4 w-full">
-                                    <Image
-                                        unoptimized
-                                        src={logoUrl}
-                                        alt={`${vendor.name} logo`}
-                                        width={56}
-                                        height={56}
-                                        className="h-14 w-14 rounded-lg object-cover force-no-border"
-                                        data-ai-hint={logoUrl !== PlaceholderImages['vendor-logo-placeholder'].imageUrl ? "vendor logo" : "logo placeholder"}
-                                    />
+                                    {isCategoryIcon ? (
+                                        <div className={`flex h-14 w-14 items-center justify-center rounded-lg ${iconBg} flex-shrink-0`}>
+                                            <Image
+                                                unoptimized
+                                                src={logoUrl}
+                                                alt={displayCategory || 'Category'}
+                                                width={28}
+                                                height={28}
+                                                className="h-7 w-7"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <Image
+                                            unoptimized
+                                            src={logoUrl}
+                                            alt={`${vendor.name} logo`}
+                                            width={56}
+                                            height={56}
+                                            className="h-14 w-14 rounded-lg object-cover force-no-border"
+                                            data-ai-hint="vendor logo"
+                                        />
+                                    )}
                                     <div className="flex-1 overflow-hidden">
                                         <div className="flex items-center gap-2">
                                             <p className="font-semibold truncate" style={{ fontSize: '1.02em' }}>{vendor.name}</p>
