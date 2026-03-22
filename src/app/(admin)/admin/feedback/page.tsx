@@ -12,14 +12,14 @@ import { FeedbackActions } from './FeedbackActions';
 import { FeedbackSummaryDialog } from './FeedbackSummaryDialog';
 
 export default function FeedbackPage() {
+  const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
   const feedbackQuery = useMemo(
     () => () => supabase.from('feedback').select('*').order('created_at', { ascending: false }),
     [refreshKey]
   );
   const { data: feedbackItems, isLoading } = useSupabaseCollection<Feedback>(feedbackQuery);
-
-  const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
 
   const handleViewSummary = (feedback: Feedback) => {
