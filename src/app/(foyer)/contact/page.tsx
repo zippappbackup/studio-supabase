@@ -14,6 +14,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
+import { v4 as uuidv4 } from 'uuid';
 
 export default function ContactPage() {
   const { toast } = useToast();
@@ -45,6 +46,7 @@ export default function ContactPage() {
       const { error } = await supabase
         .from('feedback')
         .insert({
+          feedback_id: uuidv4(),
           name: formData.name,
           email: formData.email,
           subject: formData.subject,
