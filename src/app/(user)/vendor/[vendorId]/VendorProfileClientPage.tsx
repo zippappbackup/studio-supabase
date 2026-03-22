@@ -312,7 +312,7 @@ export function VendorProfileClientPage({ vendorId }: { vendorId: string }) {
   // Fetch reviews separately to avoid 406 errors from PostgREST join
   const reviewsQuery = useMemo(
     () => vendorId ? () => supabase.from('reviews').select('*').eq('vendor_id', vendorId) : () => null,
-    [vendorId]
+    [vendorId, reviewsRefreshKey]
   );
   const { data: vendorReviews } = useSupabaseCollection<any>(reviewsQuery);
 
@@ -321,6 +321,7 @@ export function VendorProfileClientPage({ vendorId }: { vendorId: string }) {
   const [reviewToDelete, setReviewToDelete] = useState<Review | null>(null);
   const [deletingReviewId, setDeletingReviewId] = useState<string | null>(null);
   const [hasSubmittedReview, setHasSubmittedReview] = useState(false);
+  const [reviewsRefreshKey, setReviewsRefreshKey] = useState(0);
 
   const userQuery = useMemo(
     () => user ? () => supabase.from('users').select('*').eq('uid', user.uid).single() : () => null,
@@ -435,6 +436,7 @@ export function VendorProfileClientPage({ vendorId }: { vendorId: string }) {
       localStorage.setItem(storageKey, 'true');
     }
     setHasSubmittedReview(true);
+    setReviewsRefreshKey(k => k + 1);
   };
 
 
@@ -493,6 +495,7 @@ export function VendorProfileClientPage({ vendorId }: { vendorId: string }) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
       toast({ title: "Failed to delete review", description: errorMessage, variant: "destructive" });
     } finally {
+        setReviewsRefreshKey(k => k + 1);
         setTimeout(() => {
             setDeletingReviewId(null);
             setReviewToDelete(null);
