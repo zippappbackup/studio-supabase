@@ -1,12 +1,10 @@
-
 import { MetadataRoute } from 'next';
-import { getAdminApp } from '@/lib/firebase-admin';
-import type { Vendor } from '@/lib/types';
+import { createClient } from '@supabase/supabase-js';
 
-export const revalidate = 604800; // Revalidate once per week (in seconds)
+export const revalidate = 604800; // Revalidate once per week
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = 'https://zipp.sg';
+  const baseUrl = 'https://studio-supabase.pages.dev';
 
   // 1. Static Pages
   const staticRoutes = ['/welcome', '/home', '/search', '/login', '/signup', '/partners', '/about', '/contact'].map((route) => ({
@@ -19,30 +17,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // 2. Dynamic Vendor Pages
   let vendorRoutes: MetadataRoute.Sitemap = [];
   try {
-    const adminApp = getAdminApp();
-    const db = adminApp.firestore();
-    
-    // NOTE: Using the Admin SDK query style
-    const vendorSnapshot = await db.collection('vendors').get();
-    
-    vendorRoutes = vendorSnapshot.docs.map((doc) => {
-      const vendor = doc.data() as Vendor;
-      
-      // Admin SDK Timestamps are different from Client SDK
-      // They have a .toDate() method
-      const lastModified = vendor.updatedAt && typeof (vendor.updatedAt as any).toDate === 'function'
-        ? (vendor.updatedAt as any).toDate().toISOString()
-        : new Date().toISOString();
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
 
-      return {
-        url: `${baseUrl}/vendor/${doc.id}`,
-        lastModified: lastModified,
+    const { data: vendors } = await supabase
+      .from('vendors')
+      .select('vendor_id, updated_at')
+      .eq('subscription_status', 'pending_verification')
+      .limit(2000);
+
+    if (vendors) {
+      vendorRoutes = vendors.map((vendor) => ({
+        url: `${baseUrl}/vendor/${vendor.vendor_id}`,
+        lastModified: vendor.updated_at ? new Date(vendor.updated_at).toISOString() : new Date().toISOString(),
         changeFrequency: 'weekly' as const,
         priority: 0.7,
-      };
-    });
+      }));
+    }
   } catch (error) {
-    console.error("Failed to generate vendor routes for sitemap:", error);
+    console.error('Failed to generate vendor routes for sitemap:', error);
   }
 
   return [...staticRoutes, ...vendorRoutes];
