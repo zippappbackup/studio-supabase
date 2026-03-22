@@ -452,6 +452,7 @@ export function AuthForm({ type, vendorToClaim: vendorProp }: { type: "login" | 
         gender: finalGender,
         profession: finalProfession,
       };
+      console.log('SIGNUP DEBUG:', { role, claimedVendorId: vendorToClaim?.id, vendorToClaimId: vendorToClaim?.id, vendorToClaim });
 
       const { redirectPath } = await signup(email, password, signupData);
       router.push(redirectPath);
