@@ -35,7 +35,7 @@ function ClaimBusinessSignupClientPage() {
             if (error) throw error;
             
             if (data) {
-                setVendor({ id: data.vendor_id, ...data } as Vendor);
+                setVendor({ ...data, id: data.vendor_id } as Vendor);
             } else {
                 setVendor(null); // Vendor not found
             }

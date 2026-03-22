@@ -29,7 +29,7 @@ export default function ClaimBusinessPage() {
       .single()
       .then(({ data, error }) => {
         if (data && !error) {
-          setVendor({ id: data.vendor_id, ...data } as Vendor);
+          setVendor({ ...data, id: data.vendor_id } as Vendor);
         } else {
           setNotFound(true);
         }
