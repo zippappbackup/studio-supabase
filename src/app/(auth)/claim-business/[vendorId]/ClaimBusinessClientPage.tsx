@@ -67,7 +67,7 @@ export default function ClaimBusinessClientPage({ vendorId }: { vendorId: string
     router.push(`/claim-business/${vendorId}/signup`);
   };
 
-  const isLoading = isLoadingVendor || authLoading;
+  const isLoading = isLoadingVendor;
 
   if (isLoading) {
     return (
@@ -85,7 +85,8 @@ export default function ClaimBusinessClientPage({ vendorId }: { vendorId: string
     return null;
   }
 
-  if (vendor.subscriptionStatus !== 'pending_verification') {
+  const vendorStatus = (vendor as any).subscription_status || vendor.subscriptionStatus;
+  if (vendorStatus !== 'pending_verification') {
       return (
         <div className="mx-auto grid w-full max-w-md gap-6 px-4">
               <Card>
