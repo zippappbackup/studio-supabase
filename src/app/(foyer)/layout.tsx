@@ -27,12 +27,18 @@ export default function FoyerLayout({
 
   useEffect(() => {
     const update = () => {
-      const safeBottom = getComputedStyle(document.documentElement).getPropertyValue('--sat-bottom') || 'n/a';
+      const el = document.createElement('div');
+      el.style.paddingBottom = 'env(safe-area-inset-bottom)';
+      document.body.appendChild(el);
+      const safeBottom = getComputedStyle(el).paddingBottom;
+      document.body.removeChild(el);
       setDebugInfo(
-        `vh:${window.innerHeight} dvh:${document.documentElement.clientHeight} ` +
-        `scrollH:${mainRef.current?.scrollHeight || 0} ` +
-        `clientH:${mainRef.current?.clientHeight || 0} ` +
-        `safe-b:${safeBottom}`
+        `win-h:${window.innerHeight} ` +
+        `doc-h:${document.documentElement.clientHeight} ` +
+        `main-scroll:${mainRef.current?.scrollHeight || 0} ` +
+        `main-client:${mainRef.current?.clientHeight || 0} ` +
+        `safe-b:${safeBottom} ` +
+        `footer-h:${document.querySelector('footer')?.clientHeight || 0}`
       );
     };
     update();
