@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase/client';
-import { useRouter, notFound } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Logo from '@/components/core/Logo';
 
 export default function ClaimBusinessClientPage({ vendorId }: { vendorId: string }) {
@@ -71,7 +71,7 @@ export default function ClaimBusinessClientPage({ vendorId }: { vendorId: string
 
   if (isLoading) {
     return (
-        <div className="flex h-screen w-full items-center justify-center">
+        <div className="flex h-96 w-full items-center justify-center">
              <div className="flex flex-col items-center gap-4">
                 <Loader2 className="h-8 w-8 animate-spin" />
                 <p className="text-muted-foreground">Loading business details...</p>
@@ -81,8 +81,14 @@ export default function ClaimBusinessClientPage({ vendorId }: { vendorId: string
   }
 
   if (!vendor) {
-    notFound();
-    return null;
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">Business not found.</p>
+        <Button asChild className="mt-4">
+          <Link href="/signup">Go back</Link>
+        </Button>
+      </div>
+    );
   }
 
   const vendorStatus = (vendor as any).subscription_status || vendor.subscriptionStatus;
