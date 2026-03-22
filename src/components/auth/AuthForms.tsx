@@ -110,7 +110,7 @@ const VendorSearch = React.memo(function VendorSearch({ onSwitchToCreate }: { on
       </div>
 
       <form onSubmit={handleBusinessSearch} className="space-y-2">
-        <Label htmlFor="search-business">Search by Business Name</Label>
+        <h3 className="text-base font-semibold">Enter your business name to get started</h3>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
