@@ -104,13 +104,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const login = async (email: string, pass: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data: authData, error } = await supabase.auth.signInWithPassword({
       email,
       password: pass,
     });
 
     if (error) throw error;
-    
+
     // Log activity
     try {
       await logActivity('login', {});
@@ -118,7 +118,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Failed to log activity:', logError);
     }
 
-    router.push('/');
+    // Fetch user record to determine role and redirect
+    try {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('role, vendor_id')
+        .eq('uid', authData.user.id)
+        .single();
+
+      if (userData?.role === 'admin') {
+        router.push('/admin/dashboard');
+      } else if (userData?.role === 'vendor') {
+        // Check vendor subscription status
+        const vendorId = userData.vendor_id;
+        const { data: vendorData } = await supabase
+          .from('vendors')
+          .select('subscription_status')
+          .eq('vendor_id', vendorId)
+          .single();
+
+        const status = vendorData?.subscription_status;
+        if (status === 'verified') {
+          router.push('/vendor/dashboard');
+        } else if (status === 'claimed_pending_approval') {
+          router.push('/claim-success');
+        } else {
+          router.push('/home');
+        }
+      } else {
+        router.push('/home');
+      }
+    } catch (e) {
+      // Fallback
+      router.push('/home');
+    }
   };
 
   const signup = async (
