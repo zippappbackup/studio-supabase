@@ -756,10 +756,6 @@ export function AuthForm({ type, vendorToClaim: vendorProp }: { type: "login" | 
           </form>
         )}
 
-        <div className="mt-4 text-center text-sm">
-          Already have an account?{" "}
-          <Link href="/login" className="text-accent">Log in</Link>
-        </div>
       </div>
 
       <PrivacyPolicyDialog
