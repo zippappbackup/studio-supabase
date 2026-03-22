@@ -26,9 +26,10 @@ import {
 interface FeedbackActionsProps {
   feedback: Feedback;
   onViewSummary: () => void;
+  onAction?: () => void;
 }
 
-export function FeedbackActions({ feedback, onViewSummary }: FeedbackActionsProps) {
+export function FeedbackActions({ feedback, onViewSummary, onAction }: FeedbackActionsProps) {
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -50,6 +51,7 @@ export function FeedbackActions({ feedback, onViewSummary }: FeedbackActionsProp
       if (error) throw error;
       
       toast({ title: 'Feedback Deleted', description: 'The message has been removed.', variant: 'success' });
+      onAction?.();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message || 'Failed to delete feedback.', variant: 'destructive' });
     } finally {

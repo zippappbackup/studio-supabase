@@ -14,11 +14,12 @@ import { FeedbackSummaryDialog } from './FeedbackSummaryDialog';
 export default function FeedbackPage() {
   const feedbackQuery = useMemo(
     () => () => supabase.from('feedback').select('*').order('created_at', { ascending: false }),
-    []
+    [refreshKey]
   );
   const { data: feedbackItems, isLoading } = useSupabaseCollection<Feedback>(feedbackQuery);
 
   const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
 
   const handleViewSummary = (feedback: Feedback) => {
@@ -73,7 +74,7 @@ export default function FeedbackPage() {
                 {!isLoading && feedbackItems?.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell>
-                      {item.createdAt && format(new Date(item.createdAt), "dd MMM yyyy, hh:mm a")}
+                      {(item.createdAt || (item as any).created_at) && format(new Date((item as any).created_at || item.createdAt), "dd MMM yyyy, hh:mm a")}
                     </TableCell>
                     <TableCell className="font-medium">{item.name}</TableCell>
                     <TableCell>{item.subject}</TableCell>
@@ -81,6 +82,7 @@ export default function FeedbackPage() {
                       <FeedbackActions 
                         feedback={item} 
                         onViewSummary={() => handleViewSummary(item)}
+                        onAction={() => setRefreshKey(k => k + 1)}
                       />
                     </TableCell>
                   </TableRow>
