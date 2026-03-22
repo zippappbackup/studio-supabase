@@ -87,12 +87,31 @@ const VendorSearch = React.memo(function VendorSearch({ onSwitchToCreate }: { on
   };
 
   return (
-    <div className="space-y-4">
-      <div className="text-center p-0">
-        <Search className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+    <div className="space-y-6">
+      <div className="text-center">
         <h2 className="text-lg font-semibold tracking-tight">Claim Your Business | It Might Already Be Listed</h2>
-        <p className="text-sm text-muted-foreground">Start by searching for your business to claim its profile.</p>
       </div>
+
+      <div className="relative w-full overflow-hidden rounded-xl">
+        <Image
+          src="/Images/Zipp Signup img 1.png"
+          alt="Zipp vendor map"
+          width={600}
+          height={300}
+          className="w-full object-cover rounded-xl"
+          unoptimized
+        />
+      </div>
+
+      <div className="space-y-3 text-sm text-muted-foreground">
+        <p>
+          We've done the hard work so you don't have to. Zipp has spent considerable time and effort curating a comprehensive directory of quality local businesses across Singapore — from car care specialists and cleaning services to handyman professionals and mobile device repair experts. Each listing has been carefully researched and compiled to give your business the visibility it deserves.
+        </p>
+        <p>
+          All you need to do is search for your business below, claim your profile, and our team will verify and activate your listing in no time at all.
+        </p>
+      </div>
+
       <form onSubmit={handleBusinessSearch} className="space-y-2">
         <Label htmlFor="search-business">Search by Business Name</Label>
         <div className="relative">
@@ -110,9 +129,11 @@ const VendorSearch = React.memo(function VendorSearch({ onSwitchToCreate }: { on
           {isVendorDataReady ? 'Search' : 'Loading Data...'}
         </Button>
       </form>
+
       {searchError && <p className="text-sm text-center text-muted-foreground">{searchError}</p>}
+
       {searchResults.length > 0 && (
-        <div className="space-y-2 pt-4">
+        <div className="space-y-2">
           <h3 className="font-semibold text-center">Is this your business?</h3>
           {searchResults.map(vendor => {
             const logoUrl = vendor.logoUrl || (vendor.photos && vendor.photos.length > 0 ? (vendor.photos[0] as any).url || vendor.photos[0] : PlaceholderImages['vendor-logo-placeholder'].imageUrl);
@@ -122,7 +143,7 @@ const VendorSearch = React.memo(function VendorSearch({ onSwitchToCreate }: { on
               <Card key={vendor.id} className="cursor-pointer hover:border-primary" onClick={() => handleVendorClick(vendor)}>
                 <CardContent className="p-3 bg-card">
                   <div className="flex items-start gap-4 w-full">
-                    <Image src={logoUrl as string} alt="logo" width={48} height={48} className="h-12 w-12 object-cover" />
+                    <Image src={logoUrl as string} alt="logo" width={48} height={48} className="h-12 w-12 object-cover rounded-md" />
                     <div className="flex-1 overflow-hidden">
                       <p className="font-semibold truncate text-sm">{vendor.name}</p>
                       {categoryName && <p className="text-xs text-muted-foreground">{categoryName}</p>}
@@ -141,10 +162,17 @@ const VendorSearch = React.memo(function VendorSearch({ onSwitchToCreate }: { on
           })}
         </div>
       )}
-      <div className="text-center text-sm pt-2">
-        <Button variant="link" onClick={onSwitchToCreate} className="text-sm h-auto p-0 text-accent">
-          Not Listed? No worries! Create a new account here
-        </Button>
+
+      <div className="space-y-2 text-center text-sm pt-2">
+        <div>
+          <Button variant="link" onClick={onSwitchToCreate} className="text-sm h-auto p-0 text-accent">
+            Not Listed? No worries! Create a new listing here
+          </Button>
+        </div>
+        <div className="text-muted-foreground">
+          Already have an account?{" "}
+          <Link href="/login" className="text-accent">Log in</Link>
+        </div>
       </div>
     </div>
   );
