@@ -190,6 +190,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       let redirectPath = '/signup-success';
 
       // CASE 1: Claiming an existing vendor
+      console.log('SIGNUP CASE CHECK:', { claimedVendorId, role: data.role });
       if (claimedVendorId) {
         const userDocData = {
           uid: userId,
@@ -217,7 +218,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (userError) throw userError;
 
         // Update vendor with claimed status
-        const { error: vendorError } = await supabase
+        console.log('Updating vendor:', claimedVendorId);
+        const { error: vendorError, data: vendorUpdateData } = await supabase
           .from('vendors')
           .update({
             subscription_status: 'claimed_pending_approval',
@@ -226,6 +228,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           })
           .eq('vendor_id', claimedVendorId);
 
+        console.log('Vendor update result:', { vendorError, vendorUpdateData });
         if (vendorError) throw vendorError;
 
         redirectPath = '/claim-success';
