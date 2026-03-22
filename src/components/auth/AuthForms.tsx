@@ -445,14 +445,14 @@ export function AuthForm({ type, vendorToClaim: vendorProp }: { type: "login" | 
         phone: formattedPhone,
         address,
         companyName,
-        claimedVendorId: vendorToClaim?.id,
+        claimedVendorId: vendorToClaim?.id || (vendorToClaim as any)?.vendor_id,
         lat,
         lng,
         dob: dobString,
         gender: finalGender,
         profession: finalProfession,
       };
-      console.log('SIGNUP DEBUG:', { role, claimedVendorId: vendorToClaim?.id, vendorToClaimId: vendorToClaim?.id, vendorToClaim });
+      console.log('SIGNUP DEBUG:', { role, claimedVendorId: vendorToClaim?.id || (vendorToClaim as any)?.vendor_id, vendorToClaimId: vendorToClaim?.id, vendorToClaim });
 
       const { redirectPath } = await signup(email, password, signupData);
       router.push(redirectPath);
