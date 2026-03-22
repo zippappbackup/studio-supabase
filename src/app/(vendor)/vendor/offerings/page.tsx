@@ -17,11 +17,12 @@ export default function OfferingsPage() {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [selectedOffering, setSelectedOffering] = useState<Offering | undefined>(undefined);
 
-    const vendorId = user?.vendorId || user?.uid;
+    const vendorId = (user as any)?.vendor_id || user?.vendorId || user?.uid;
+    const [refreshKey, setRefreshKey] = useState(0);
 
     const vendorQuery = useMemo(
         () => vendorId ? () => supabase.from('vendors').select('*').eq('vendor_id', vendorId).single() : () => null,
-        [vendorId]
+        [vendorId, refreshKey]
     );
     const { data: vendor, isLoading } = useSupabaseDoc<Vendor>(vendorQuery);
     
@@ -84,7 +85,7 @@ export default function OfferingsPage() {
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <OfferingActions offering={offering} onEdit={() => handleEdit(offering)} />
+                                        <OfferingActions offering={offering} onEdit={() => handleEdit(offering)} onAction={() => setRefreshKey(k => k + 1)} />
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -97,6 +98,7 @@ export default function OfferingsPage() {
                 isOpen={isDialogOpen}
                 setIsOpen={setIsDialogOpen}
                 offering={selectedOffering}
+                onSaved={() => setRefreshKey(k => k + 1)}
             />
         </div>
     );

@@ -37,7 +37,7 @@ const countryCurrencyMap: { [key: string]: string } = {
   SG: "SGD", MY: "MYR", AU: "AUD", US: "USD", GB: "GBP",
 };
 
-export function OfferingEditDialog({ isOpen, setIsOpen, offering }: { isOpen: boolean; setIsOpen: (isOpen: boolean) => void; offering?: Offering; }) {
+export function OfferingEditDialog({ isOpen, setIsOpen, offering, onSaved }: { isOpen: boolean; setIsOpen: (isOpen: boolean) => void; offering?: Offering; onSaved?: () => void; }) {
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -162,6 +162,7 @@ export function OfferingEditDialog({ isOpen, setIsOpen, offering }: { isOpen: bo
 
       await logActivity(supabase, vendorId, isCreating ? 'offering_create' : 'offering_update', { offeringId: finalData.id, name: finalData.name });
       toast({ title: isCreating ? "Offering Created" : "Offering Updated", description: `"${finalData.name}" has been saved.` });
+      onSaved?.();
       setInitialOfferingData(finalData);
       setIsOpen(false);
     } catch (e: any) {

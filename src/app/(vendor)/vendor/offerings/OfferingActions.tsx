@@ -27,15 +27,16 @@ import {
 interface OfferingActionsProps {
     offering: Offering;
     onEdit: () => void;
+    onAction?: () => void;
 }
 
-export function OfferingActions({ offering, onEdit }: OfferingActionsProps) {
+export function OfferingActions({ offering, onEdit, onAction }: OfferingActionsProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
-  const vendorId = user?.vendorId || user?.uid;
+  const vendorId = (user as any)?.vendor_id || user?.vendorId || user?.uid;
 
   const handleToggleActive = async () => {
     if (!vendorId) return;
@@ -69,6 +70,7 @@ export function OfferingActions({ offering, onEdit }: OfferingActionsProps) {
             description: `${offering.name} is now ${!offering.isActive ? 'active' : 'inactive'}.`,
             variant: "success",
         });
+        onAction?.();
     } catch (error: any) {
         toast({ title: "Error", description: error.message || "Could not update offering status.", variant: "destructive" });
     } finally {
@@ -107,6 +109,7 @@ export function OfferingActions({ offering, onEdit }: OfferingActionsProps) {
         if (updateError) throw updateError;
         
         toast({ title: "Offering Deleted", description: `"${offering.name}" has been removed.`, variant: "success" });
+        onAction?.();
     } catch(error: any) {
         toast({ title: "Error", description: error.message || "Could not delete offering.", variant: "destructive" });
     } finally {
