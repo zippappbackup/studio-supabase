@@ -50,11 +50,12 @@ export default function PromotionsPage() {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [selectedPromotion, setSelectedPromotion] = useState<Promotion | undefined>(undefined);
 
-    const vendorId = user?.vendorId || user?.uid;
+    const vendorId = (user as any)?.vendor_id || user?.vendorId || user?.uid;
+    const [refreshKey, setRefreshKey] = useState(0);
 
     const vendorQuery = useMemo(
         () => vendorId ? () => supabase.from('vendors').select('*').eq('vendor_id', vendorId).single() : () => null,
-        [vendorId]
+        [vendorId, refreshKey]
     );
     const { data: vendor, isLoading } = useSupabaseDoc<Vendor>(vendorQuery);
     
@@ -108,6 +109,7 @@ export default function PromotionsPage() {
                 isOpen={isDialogOpen}
                 setIsOpen={setIsDialogOpen}
                 promotion={selectedPromotion}
+                onSaved={() => setRefreshKey(k => k + 1)}
             />
         </div>
     );

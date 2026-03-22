@@ -50,9 +50,10 @@ interface PromotionEditDialogProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   promotion?: Promotion;
+  onSaved?: () => void;
 }
 
-export function PromotionEditDialog({ isOpen, setIsOpen, promotion }: PromotionEditDialogProps) {
+export function PromotionEditDialog({ isOpen, setIsOpen, promotion, onSaved }: PromotionEditDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -92,7 +93,7 @@ export function PromotionEditDialog({ isOpen, setIsOpen, promotion }: PromotionE
         toast({ title: "Error", description: "You must be logged in.", variant: "destructive" });
         return;
     }
-    const vendorId = user.vendorId || user.uid;
+    const vendorId = (user as any).vendor_id || user.vendorId || user.uid;
     setIsLoading(true);
     
     const finalData: Omit<Promotion, 'redemptionType'> & { redemptionType?: string } = {
@@ -138,6 +139,7 @@ export function PromotionEditDialog({ isOpen, setIsOpen, promotion }: PromotionE
         if (updateError) throw updateError;
         
         toast({ title: promotion ? "Promotion Updated" : "Promotion Created", description: `"${data.title}" has been saved.`, variant: "success" });
+        onSaved?.();
         setIsOpen(false);
     } catch(e: any) {
         toast({ title: "Error", description: e.message, variant: "destructive" });
