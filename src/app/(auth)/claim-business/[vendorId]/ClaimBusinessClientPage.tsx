@@ -41,11 +41,14 @@ export default function ClaimBusinessClientPage({ vendorId }: { vendorId: string
         };
         setIsLoadingVendor(true);
         try {
+            console.log("Fetching vendor:", vendorId);
             const { data, error } = await supabase
                 .from('vendors')
                 .select('*')
                 .eq('vendor_id', vendorId)
                 .single();
+            
+            console.log("Vendor fetch result:", { data, error });
             
             if (data && !error) {
                 setVendor({ id: data.vendor_id, ...data } as Vendor);
@@ -56,6 +59,7 @@ export default function ClaimBusinessClientPage({ vendorId }: { vendorId: string
             console.error("Error fetching vendor data:", error);
             setVendor(null);
         } finally {
+            console.log("Setting isLoadingVendor to false");
             setIsLoadingVendor(false);
         }
     }
