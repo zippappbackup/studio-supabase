@@ -123,7 +123,7 @@ function PromotionsBreakdownCard({ promotions, isLoading }: { promotions: Promot
 export default function VendorDashboard() {
   const { user } = useAuth();
   
-  const vendorId = user?.vendorId || user?.uid;
+  const vendorId = (user as any)?.vendor_id || user?.vendorId || user?.uid;
 
   const vendorQuery = useMemo(
     () => vendorId ? () => supabase.from('vendors').select('*').eq('vendor_id', vendorId).single() : () => null,
@@ -138,15 +138,17 @@ export default function VendorDashboard() {
     : "Vendor Dashboard";
 
     const subscriptionValue = useMemo(() => {
-        const status = vendor?.subscriptionStatus;
+        const status = (vendor as any)?.subscription_status || vendor?.subscriptionStatus;
         if (!status) return '...';
         const capitalizedStatus = status.charAt(0).toUpperCase() + status.slice(1);
         return capitalizedStatus.replace(/_/g, ' ');
     }, [vendor]);
     
     const subscriptionDescription = useMemo(() => {
-        if (vendor?.subscriptionStatus === 'trial' && vendor.trialStartedAt) {
-            const trialStartDate = new Date(vendor.trialStartedAt);
+        const vendorStatus = (vendor as any)?.subscription_status || vendor?.subscriptionStatus;
+        const trialStartedAt = (vendor as any)?.trial_started_at || vendor?.trialStartedAt;
+        if (vendorStatus === 'trial' && trialStartedAt) {
+            const trialStartDate = new Date(trialStartedAt);
             const trialEndDate = new Date(trialStartDate);
             trialEndDate.setDate(trialEndDate.getDate() + 14); // Assuming a 14-day trial
             
@@ -164,9 +166,9 @@ export default function VendorDashboard() {
 
     const kpis = [
       { title: "Subscription", value: subscriptionValue, isLoading: isVendorLoading, description: subscriptionDescription },
-      { title: "Zipp Rating", value: `${(vendor?.zippRating || 0).toFixed(1)}/5`, isLoading: isVendorLoading, description: `From ${vendor?.zippReviewCount || 0} reviews` },
+      { title: "Zipp Rating", value: `${((vendor as any)?.zipp_rating || vendor?.zippRating || 0).toFixed(1)}/5`, isLoading: isVendorLoading, description: `From ${(vendor as any)?.zipp_review_count || vendor?.zippReviewCount || 0} reviews` },
       { title: "Offerings", value: vendor?.offerings?.length || 0, isLoading: isVendorLoading, description: "Active products & services" },
-      { title: "Profile Views", value: vendor?.profileViews ?? 0, isLoading: isVendorLoading, description: "Total times your profile has been viewed" },
+      { title: "Profile Views", value: (vendor as any)?.profile_views ?? vendor?.profileViews ?? 0, isLoading: isVendorLoading, description: "Total times your profile has been viewed" },
     ];
 
   return (
