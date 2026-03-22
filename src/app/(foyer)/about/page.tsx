@@ -7,40 +7,43 @@ import Link from 'next/link';
 
 export default function AboutPage() {
   return (
-    <>
+    <div className="w-full space-y-2 text-center">
       <section className="space-y-4">
         <h1 className="text-3xl font-bold leading-tight tracking-tighter">
           Our Mission: To Make Life Easier
         </h1>
-        <p className="mx-auto max-w-2xl text-muted-foreground">
+        <p className="text-muted-foreground">
           Zipp was born from a simple idea: finding trusted local service providers in Singapore shouldn't be a chore. We got tired of endless searching, comparing quotes, and wondering who to trust. We knew there had to be a better way.
         </p>
+        <div className="pt-4 max-w-xl mx-auto">
+          <img
+            src="/Images/zipp-about-page-img-1.png"
+            alt="About Zipp"
+            width={800}
+            height={400}
+            className="w-full rounded-lg"
+          />
+        </div>
       </section>
 
-      <section>
-        <img
-          src="/Images/zipp-about-page-img-1.png"
-          alt="About Zipp"
-          width={800}
-          height={400}
-          className="w-full rounded-lg"
-        />
-      </section>
-
-      <section className="space-y-2">
-        <h2 className="text-2xl font-bold mb-4">What We Do</h2>
-        <p className="mx-auto max-w-3xl text-muted-foreground">
-          We are a Singapore-based team dedicated to building the most comprehensive and reliable collection of local businesses. We do the groundwork - finding, verifying, and organizing our business partners - so you can find the help you need, right when you need it. From urgent home repairs to routine car care, Zipp connects you directly with the professionals who can get the job done. No middlemen, no hidden fees.
-        </p>
-      </section>
-      
-      <div className="py-2">
+      <div className="space-y-2 py-4">
         <Separator style={{ backgroundColor: 'hsl(212, 71%, 85.3%)' }} />
       </div>
 
-      <section className="space-y-8">
+      <section className="space-y-4">
+        <h2 className="text-2xl font-bold">What We Do</h2>
+        <p className="text-muted-foreground">
+          We are a Singapore-based team dedicated to building the most comprehensive and reliable collection of local businesses. We do the groundwork - finding, verifying, and organizing our business partners - so you can find the help you need, right when you need it. From urgent home repairs to routine car care, Zipp connects you directly with the professionals who can get the job done. No middlemen, no hidden fees.
+        </p>
+      </section>
+
+      <div className="space-y-2 py-4">
+        <Separator style={{ backgroundColor: 'hsl(212, 71%, 85.3%)' }} />
+      </div>
+
+      <section className="space-y-4">
         <h2 className="text-2xl font-bold">Built On Our Values</h2>
-        <div className="grid grid-cols-1 gap-8 text-left md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-8 text-left md:grid-cols-3 pt-2">
           <Card>
             <CardContent className="p-4 flex items-start gap-4">
               <img
@@ -60,7 +63,7 @@ export default function AboutPage() {
           </Card>
           <Card>
             <CardContent className="p-4 flex items-start gap-4">
-               <img
+              <img
                 src="/Images/zipp-about-page-img-3.png"
                 alt="Community First"
                 width={72}
@@ -77,7 +80,7 @@ export default function AboutPage() {
           </Card>
           <Card>
             <CardContent className="p-4 flex items-start gap-4">
-               <img
+              <img
                 src="/Images/zipp-about-page-img-4.png"
                 alt="Simplicity in Design"
                 width={72}
@@ -94,7 +97,6 @@ export default function AboutPage() {
           </Card>
         </div>
       </section>
-      
-    </>
+    </div>
   );
 }
