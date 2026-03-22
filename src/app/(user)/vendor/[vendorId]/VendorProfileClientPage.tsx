@@ -804,9 +804,9 @@ export function VendorProfileClientPage({ vendorId }: { vendorId: string }) {
                   <CardContent className="space-y-4 p-0">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-4 text-sm">
-                          {hydratedVendor.operatingHours && Array.isArray(hydratedVendor.operatingHours) && hydratedVendor.operatingHours.length > 0 && (
-                              <div>
-                                  <h4 className="font-semibold mb-2">Operating Hours</h4>
+                          <div>
+                              <h4 className="font-semibold mb-2">Operating Hours</h4>
+                              {hydratedVendor.operatingHours && Array.isArray(hydratedVendor.operatingHours) && hydratedVendor.operatingHours.length > 0 ? (
                                   <div className="grid grid-cols-1 gap-y-1 text-muted-foreground text-xs">
                                     {hydratedVendor.operatingHours.map((item, index) => (
                                         <div key={index} className="flex justify-between">
@@ -815,8 +815,10 @@ export function VendorProfileClientPage({ vendorId }: { vendorId: string }) {
                                         </div>
                                     ))}
                                   </div>
-                              </div>
-                          )}
+                              ) : (
+                                  <p className="text-xs text-muted-foreground">Operating hours not stated.</p>
+                              )}
+                          </div>
                         </div>
                         <div className="space-y-4">
                             {hydratedVendor.lat && hydratedVendor.lng && (
