@@ -60,6 +60,13 @@ const LOAD_MORE_COUNT = 8;
 const VendorCard = React.memo(function VendorCard({ vendor, allCategories }: { vendor: Vendor, allCategories: Category[] }) {
     const logoUrl = getLogoUrl(vendor);
     const isCategoryIcon = logoUrl.endsWith('.svg');
+    const categoryColors: { [key: string]: string } = {
+        'car care': 'bg-amber-100',
+        'cleaning services': 'bg-blue-100',
+        'handyman services': 'bg-green-100',
+        'mobile device repair': 'bg-purple-100',
+    };
+    const iconBg = categoryColors[(vendor.categoryId || '').toLowerCase()] || 'bg-primary/10';
 
     const rating = vendor.zippRating || vendor.googleRating;
     const reviewCount = vendor.zippReviewCount || vendor.googleReviewCount;
@@ -74,13 +81,13 @@ const VendorCard = React.memo(function VendorCard({ vendor, allCategories }: { v
                 <div className="flex items-start gap-4 w-full">
                     
                     {isCategoryIcon ? (
-                        <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-primary flex-shrink-0">
-                             <Image 
+                        <div className={`flex h-14 w-14 items-center justify-center rounded-lg ${iconBg} flex-shrink-0`}>
+                            <Image 
                                 src={logoUrl} 
                                 alt={displayCategory || "Category"} 
                                 width={28} 
                                 height={28} 
-                                className="h-7 w-7 filter-primary-foreground"
+                                className="h-7 w-7"
                             />
                         </div>
                     ) : (

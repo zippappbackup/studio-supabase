@@ -303,6 +303,13 @@ export function VendorProfileClientPage({ vendorId }: { vendorId: string }) {
   const [isLoading, setIsLoading] = useState(true);
 
   // useDoc for fetching live, detailed data
+  const [editingReview, setEditingReview] = useState<Review | undefined>(undefined);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [reviewToDelete, setReviewToDelete] = useState<Review | null>(null);
+  const [deletingReviewId, setDeletingReviewId] = useState<string | null>(null);
+  const [hasSubmittedReview, setHasSubmittedReview] = useState(false);
+  const [reviewsRefreshKey, setReviewsRefreshKey] = useState(0);
+
   const vendorQuery = useMemo(
     () => vendorId ? () => supabase.from('vendors').select('*').eq('vendor_id', vendorId).single() : () => null,
     [vendorId]
@@ -315,13 +322,6 @@ export function VendorProfileClientPage({ vendorId }: { vendorId: string }) {
     [vendorId, reviewsRefreshKey]
   );
   const { data: vendorReviews } = useSupabaseCollection<any>(reviewsQuery);
-
-  const [editingReview, setEditingReview] = useState<Review | undefined>(undefined);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [reviewToDelete, setReviewToDelete] = useState<Review | null>(null);
-  const [deletingReviewId, setDeletingReviewId] = useState<string | null>(null);
-  const [hasSubmittedReview, setHasSubmittedReview] = useState(false);
-  const [reviewsRefreshKey, setReviewsRefreshKey] = useState(0);
 
   const userQuery = useMemo(
     () => user ? () => supabase.from('users').select('*').eq('uid', user.uid).single() : () => null,
