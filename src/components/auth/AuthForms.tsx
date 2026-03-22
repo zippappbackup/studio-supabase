@@ -280,7 +280,7 @@ export function AuthForm({ type, vendorToClaim: vendorProp }: { type: "login" | 
   const [signupLat, setSignupLat] = useState<number | null>(null);
   const [signupLng, setSignupLng] = useState<number | null>(null);
 
-  const initialRole = searchParams.get('role') === 'vendor' ? 'vendor' : 'user';
+  const initialRole = (searchParams.get('role') === 'vendor' || !!vendorProp) ? 'vendor' : 'user';
   const [role, setRole] = useState<'user' | 'vendor'>(initialRole);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -291,7 +291,10 @@ export function AuthForm({ type, vendorToClaim: vendorProp }: { type: "login" | 
   const [formView, setFormView] = useState<'login' | 'reset'>('login');
 
   useEffect(() => {
-    if (vendorProp) setVendorToClaim(vendorProp);
+    if (vendorProp) {
+      setVendorToClaim(vendorProp);
+      setRole('vendor');
+    }
   }, [vendorProp]);
 
   // Fetch vendor by ID from URL param (Supabase version)
