@@ -23,6 +23,22 @@ export default function FoyerLayout({
   ];
 
   const mainRef = useRef<HTMLElement>(null);
+  const [debugInfo, setDebugInfo] = React.useState<string>('');
+
+  useEffect(() => {
+    const update = () => {
+      const safeBottom = getComputedStyle(document.documentElement).getPropertyValue('--sat-bottom') || 'n/a';
+      setDebugInfo(
+        `vh:${window.innerHeight} dvh:${document.documentElement.clientHeight} ` +
+        `scrollH:${mainRef.current?.scrollHeight || 0} ` +
+        `clientH:${mainRef.current?.clientHeight || 0} ` +
+        `safe-b:${safeBottom}`
+      );
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
 
   useEffect(() => {
     if (mainRef.current) {
@@ -78,6 +94,22 @@ export default function FoyerLayout({
         </footer>
       </main>
 
+      {/* DEBUG OVERLAY - REMOVE AFTER FIXING */}
+      <div style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        background: 'rgba(0,0,0,0.8)',
+        color: 'white',
+        fontSize: '10px',
+        padding: '4px 8px',
+        zIndex: 9999,
+        fontFamily: 'monospace',
+        wordBreak: 'break-all'
+      }}>
+        {debugInfo}
+      </div>
     </div>
   );
 }
