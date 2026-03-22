@@ -94,7 +94,7 @@ const VendorSearch = React.memo(function VendorSearch({ onSwitchToCreate }: { on
 
       <div className="relative w-full overflow-hidden rounded-xl">
         <Image
-          src="/Images/Zipp Signup img 1.png"
+          src="/Images/zipp-signup-img-1.png"
           alt="Zipp vendor map"
           width={600}
           height={300}
@@ -105,10 +105,7 @@ const VendorSearch = React.memo(function VendorSearch({ onSwitchToCreate }: { on
 
       <div className="space-y-3 text-sm text-muted-foreground">
         <p>
-          We've done the hard work so you don't have to. Zipp has spent considerable time and effort curating a comprehensive directory of quality local businesses across Singapore — from car care specialists and cleaning services to handyman professionals and mobile device repair experts. Each listing has been carefully researched and compiled to give your business the visibility it deserves.
-        </p>
-        <p>
-          All you need to do is search for your business below, claim your profile, and our team will verify and activate your listing in no time at all.
+          We've done the groundwork for you. Zipp has curated a growing directory of quality local businesses across Singapore. Search below to find your business and claim your profile in no time at all.
         </p>
       </div>
 
