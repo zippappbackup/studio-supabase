@@ -81,7 +81,7 @@ export function AppCacheProvider({ children }: { children: ReactNode }) {
           .from('vendor_dataset_config')
           .select('*')
           .eq('config_key', 'global')
-          .single();
+          .maybeSingle();
         
         let vendors: Vendor[] = [];
         
@@ -213,7 +213,7 @@ export function AppCacheProvider({ children }: { children: ReactNode }) {
           .from('zipp_highlights')
           .select('vendor_ids')
           .eq('singleton_key', 'singleton')
-          .single();
+          .maybeSingle();
         
         if (error) throw error;
         
