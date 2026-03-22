@@ -13,7 +13,7 @@ import { MoreVertical, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { useState } from "react";
 import type { Vendor } from "@/lib/types";
 
-export function VendorActions({ vendor }: { vendor: Vendor }) {
+export function VendorActions({ vendor, onAction }: { vendor: Vendor, onAction?: () => void }) {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
 
@@ -52,6 +52,7 @@ export function VendorActions({ vendor }: { vendor: Vendor }) {
                 description: `"${vendor.name}" is now a verified vendor.`,
                 variant: "success",
             });
+            onAction?.();
         } catch (error) {
             console.error("Error approving vendor:", error);
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -83,6 +84,7 @@ export function VendorActions({ vendor }: { vendor: Vendor }) {
                 title: "Claim Rejected",
                 description: `The claim for "${vendor.name}" has been rejected.`,
             });
+            onAction?.();
         } catch (error) {
             console.error("Error rejecting vendor:", error);
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";

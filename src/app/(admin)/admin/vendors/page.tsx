@@ -22,20 +22,17 @@ import { Search } from "lucide-react";
 
 export default function VendorApprovalsPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const pendingClaimsQuery = useMemo(
     () => () => supabase
       .from('vendors')
       .select('*')
       .eq('subscription_status', 'claimed_pending_approval'),
-    []
+    [refreshKey]
   );
 
-  // realtime: true so the list auto-refreshes when a vendor is approved or rejected
-  const { data: vendors, isLoading } = useSupabaseCollection<Vendor>(pendingClaimsQuery, {
-    realtime: true,
-    realtimeEvent: 'UPDATE',
-  });
+  const { data: vendors, isLoading } = useSupabaseCollection<Vendor>(pendingClaimsQuery);
 
   const filteredVendors = useMemo(() => {
     if (!vendors) return [];
@@ -117,7 +114,7 @@ export default function VendorApprovalsPage() {
                         {updatedAt && format(new Date(updatedAt), "dd MMM yyyy")}
                       </TableCell>
                       <TableCell>
-                        <VendorActions vendor={vendor} />
+                        <VendorActions vendor={vendor} onAction={() => setRefreshKey(k => k + 1)} />
                       </TableCell>
                     </TableRow>
                   );
