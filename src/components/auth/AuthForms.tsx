@@ -92,6 +92,12 @@ const VendorSearch = React.memo(function VendorSearch({ onSwitchToCreate }: { on
         <h2 className="text-lg font-semibold tracking-tight">Claim Your Business | It Might Already Be Listed</h2>
       </div>
 
+      <div className="space-y-3 text-sm text-muted-foreground">
+        <p>
+          We've done the groundwork for you. Zipp has curated a growing directory of quality local businesses across Singapore. Search below to find your business and claim your profile in no time at all.
+        </p>
+      </div>
+
       <div className="relative w-full overflow-hidden rounded-xl">
         <Image
           src="/Images/zipp-signup-img-1.png"
@@ -101,12 +107,6 @@ const VendorSearch = React.memo(function VendorSearch({ onSwitchToCreate }: { on
           className="w-full object-cover rounded-xl"
           unoptimized
         />
-      </div>
-
-      <div className="space-y-3 text-sm text-muted-foreground">
-        <p>
-          We've done the groundwork for you. Zipp has curated a growing directory of quality local businesses across Singapore. Search below to find your business and claim your profile in no time at all.
-        </p>
       </div>
 
       <form onSubmit={handleBusinessSearch} className="space-y-2">
