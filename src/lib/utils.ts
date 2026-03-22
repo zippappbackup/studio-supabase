@@ -23,10 +23,14 @@ export const getLogoUrl = (vendor: Partial<Vendor>): string => {
   }
 
   // 2. Check the photos array for the first available image.
+  // Skip Google Places URLs as they expire - only use Supabase or other permanent URLs
   if (Array.isArray(vendor.photos) && vendor.photos.length > 0) {
     const firstPhoto = vendor.photos[0];
     if (typeof firstPhoto === 'string' && firstPhoto.trim() !== '') {
-      return firstPhoto;
+      // Skip expiring Google Maps photo URLs - fall through to category icon
+      if (!firstPhoto.includes('maps.googleapis.com/maps/api/place/photo')) {
+        return firstPhoto;
+      }
     }
     if (typeof firstPhoto === 'object' && firstPhoto !== null && 'photo_reference' in firstPhoto) {
        const photoRef = (firstPhoto as GooglePhoto).photo_reference;
@@ -48,6 +52,19 @@ export const getLogoUrl = (vendor: Partial<Vendor>): string => {
   }
 
   // 4. Final fallback to the generic placeholder.
+  return PlaceholderImages['vendor-logo-placeholder'].imageUrl;
+};
+
+export const getCategoryIconUrl = (categoryId?: string): string => {
+  const icons: { [key: string]: string } = {
+    'car care': '/icons/car-care.svg',
+    'cleaning services': '/icons/cleaning-services.svg',
+    'handyman services': '/icons/handyman-services.svg',
+    'mobile device repair': '/icons/mobile-device-repair.svg',
+  };
+  if (categoryId && icons[categoryId.toLowerCase()]) {
+    return icons[categoryId.toLowerCase()];
+  }
   return PlaceholderImages['vendor-logo-placeholder'].imageUrl;
 };
 
