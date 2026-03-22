@@ -37,7 +37,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#ffffff", // Moved from manifest to viewport for better browser support
+  themeColor: "#ffffff",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
