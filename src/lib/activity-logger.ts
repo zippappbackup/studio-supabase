@@ -23,7 +23,7 @@ async function ensureConfigIsLoaded(supabase: SupabaseClient) {
             .from('admin_config')
             .select('activity_log_config')
             .eq('config_key', 'singleton')
-            .single();
+            .maybeSingle();
         
         if (error) throw error;
         
