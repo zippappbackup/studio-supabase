@@ -62,7 +62,7 @@ export default function FoyerLayout({
         <div className="w-full max-w-4xl mx-auto px-6 py-4 min-h-full">
           {children}
         </div>
-        <footer className="w-full max-w-4xl mx-auto px-6 pb-6 pt-2">
+        <footer className="w-full max-w-4xl mx-auto px-6 pt-2" style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom))" }}>
           <Separator style={{ backgroundColor: "hsl(212, 71%, 85.3%)" }} className="mb-4" />
           <div className="flex justify-center gap-6 pb-3">
             <a href="https://www.facebook.com/share/1Ah9cGwFNy/" target="_blank" rel="noopener noreferrer" className="bg-black rounded-md p-1.5">
