@@ -42,10 +42,10 @@ export const getLogoUrl = (vendor: Partial<Vendor>): string => {
   
   // 3. NEW: Fallback to category-specific icon if no logo or photo exists.
   const icons: { [key: string]: string } = {
-    'car care': '/icons/car care.svg',
-    'cleaning services': '/icons/cleaning services.svg',
-    'handyman services': '/icons/handyman services.svg',
-    'mobile device repair': '/icons/mobile device repair.svg',
+    'car care': '/icons/car-care.svg',
+    'cleaning services': '/icons/cleaning-services.svg',
+    'handyman services': '/icons/handyman-services.svg',
+    'mobile device repair': '/icons/mobile-device-repair.svg',
   };
   if (vendor.categoryId && icons[vendor.categoryId.toLowerCase()]) {
       return icons[vendor.categoryId.toLowerCase()];
