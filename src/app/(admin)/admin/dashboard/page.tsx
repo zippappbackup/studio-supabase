@@ -73,11 +73,20 @@ export default function AdminDashboard() {
   );
   const { data: pendingClaims, isLoading: isLoadingPending } = useSupabaseCollection<Vendor>(pendingClaimsQuery);
   
-  const unclaimedVendorsQuery = useMemo(
-    () => () => supabase.from('vendors').select('*').eq('subscription_status', 'pending_verification'),
-    []
-  );
-  const { data: unclaimedVendors, isLoading: isLoadingUnclaimed } = useSupabaseCollection<Vendor>(unclaimedVendorsQuery);
+  const [unclaimedCount, setUnclaimedCount] = useState<number>(0);
+  const [isLoadingUnclaimed, setIsLoadingUnclaimed] = useState(true);
+
+  useEffect(() => {
+    const fetchUnclaimedCount = async () => {
+      const { count } = await supabase
+        .from('vendors')
+        .select('*', { count: 'exact', head: true })
+        .eq('subscription_status', 'pending_verification');
+      setUnclaimedCount(count ?? 0);
+      setIsLoadingUnclaimed(false);
+    };
+    fetchUnclaimedCount();
+  }, []);
 
 
   // --- Derived Data from Snapshot for Efficiency ---
@@ -134,7 +143,7 @@ export default function AdminDashboard() {
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
               <p className="text-sm text-muted-foreground">
-                There are currently {unclaimedVendors?.length ?? 0} businesses that are not yet claimed by an owner.
+                There are currently {unclaimedCount} businesses that are not yet claimed by an owner.
               </p>
             )}
           </CardContent>
