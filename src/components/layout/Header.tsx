@@ -43,7 +43,7 @@ export default function Header({ children }: { children?: React.ReactNode }) {
 
   return (
     <header 
-      className="sticky top-0 z-50 bg-transparent backdrop-blur-sm pb-2"
+      className="sticky top-0 z-50 bg-transparent backdrop-blur-sm"
     >
         <div className="flex h-12 items-center justify-between px-4 md:px-6">
             <div className="flex items-center gap-3">
