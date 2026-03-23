@@ -47,7 +47,7 @@ export function PhotoMigrationCard() {
 
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
         const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-        const BATCH_SIZE = 5;
+        const BATCH_SIZE = 1;
         let remaining = totalRemaining || 0;
         let batchNumber = 0;
 

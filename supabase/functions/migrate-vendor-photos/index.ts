@@ -54,7 +54,7 @@ serve(async (req) => {
 
     // Parse request body
     const body = await req.json().catch(() => ({}))
-    const limit = body.limit || 5
+    const limit = body.limit || 1
 
     logs.push(`Starting batch of ${limit} vendors...`)
 
