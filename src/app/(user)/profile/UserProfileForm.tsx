@@ -62,7 +62,16 @@ export default function UserProfileForm({ onOpenPasswordDialog }: UserProfileFor
                 }
                 
                 if (data) {
-                    const userData = { uid: data.uid, ...data } as ZippUser;
+                    const userData = { 
+                        uid: data.uid, 
+                        ...data,
+                        address: {
+                            line1: data.address_line1 || '',
+                            line2: data.address_line2 || '',
+                            postalCode: data.address_postal_code || '',
+                            country: data.address_country || '',
+                        }
+                    } as ZippUser;
                     setUser(userData);
                     setInitialUser(userData);
                     if (userData.dob) {
@@ -153,16 +162,23 @@ export default function UserProfileForm({ onOpenPasswordDialog }: UserProfileFor
         }
         
         try {
-            const dataToUpdate = {
+            // Only include address fields if they have values - never overwrite with empty
+            const dataToUpdate: any = {
                 name: user.name,
                 phone: user.phone,
                 profession: user.profession,
-                address: user.address,
-                region: user.region,
-                dob: dobString,
-                gender: gender ?? null,
                 updated_at: new Date().toISOString(),
             };
+
+            if (dobString) dataToUpdate.dob = dobString;
+            if (gender) dataToUpdate.gender = gender;
+            if (user.address?.line1) dataToUpdate.address_line1 = user.address.line1;
+            if (user.address?.line2 !== undefined) dataToUpdate.address_line2 = user.address.line2;
+            if (user.address?.postalCode) dataToUpdate.address_postal_code = user.address.postalCode;
+            if (user.address?.country) {
+                dataToUpdate.address_country = user.address.country;
+                dataToUpdate.region = user.address.country;
+            }
 
             const { error } = await supabase
                 .from('users')
