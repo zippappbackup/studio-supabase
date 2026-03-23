@@ -18,13 +18,23 @@ export function PhotoMigrationTestCard() {
 
         try {
             // Refresh session before calling edge function
-            const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
-            
-            if (refreshError || !session) {
-                throw new Error("Session refresh failed. Please log out and back in.");
+            let session = null;
+            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+            if (!refreshError && refreshData.session) {
+                session = refreshData.session;
+                setLogs(prev => [...prev, "Session refreshed successfully."]);
+            } else {
+                // Fallback to current session
+                const { data: sessionData } = await supabase.auth.getSession();
+                session = sessionData.session;
+                setLogs(prev => [...prev, "Using current session."]);
             }
 
-            setLogs(prev => [...prev, "Session refreshed. Calling test migration..."]);
+            if (!session) {
+                throw new Error("No active session. Please log out and back in.");
+            }
+
+            setLogs(prev => [...prev, "Calling test migration function..."]);
 
             const { data, error } = await supabase.functions.invoke('migrate-vendor-photos-test', {
                 headers: {
