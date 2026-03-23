@@ -22,16 +22,21 @@ export default function FoyerLayout({
     { href: "/contact", label: "Contact" },
   ];
 
-  const mainRef = useRef<HTMLElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (mainRef.current) {
-      mainRef.current.scrollTop = 0;
-    }
-  }, [pathname]);
+    const setHeight = () => {
+      if (containerRef.current) {
+        containerRef.current.style.height = `${window.innerHeight}px`;
+      }
+    };
+    setHeight();
+    window.addEventListener('resize', setHeight);
+    return () => window.removeEventListener('resize', setHeight);
+  }, []);
 
   return (
-    <div className="flex flex-col h-dvh w-full">
+    <div ref={containerRef} className="flex flex-col w-full" style={{ height: "100dvh" }}>
 
       {/* HEADER */}
       <header className="sticky top-0 z-50 bg-transparent flex-shrink-0">
@@ -58,7 +63,7 @@ export default function FoyerLayout({
       </header>
 
       {/* SCROLLABLE AREA */}
-      <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden" style={{ WebkitOverflowScrolling: "touch" }}>
+      <main className="flex-1 overflow-y-auto overflow-x-hidden" style={{ WebkitOverflowScrolling: "touch" }}>
         <div className="w-full max-w-4xl mx-auto px-6 py-4">
           {children}
         </div>
