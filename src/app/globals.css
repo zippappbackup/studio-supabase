@@ -95,7 +95,6 @@
     @apply overflow-x-hidden;
     font-size: 82%;
     overscroll-behavior-y: none;
-    height: 100%;
   }
   body {
     @apply bg-background text-foreground;

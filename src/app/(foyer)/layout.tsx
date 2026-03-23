@@ -24,7 +24,6 @@ export default function FoyerLayout({
 
   const mainRef = useRef<HTMLElement>(null);
 
-
   useEffect(() => {
     if (mainRef.current) {
       mainRef.current.scrollTop = 0;
@@ -32,7 +31,7 @@ export default function FoyerLayout({
   }, [pathname]);
 
   return (
-    <div className="flex flex-col h-full overflow-hidden w-full">
+    <div className="flex flex-col h-dvh overflow-hidden w-full">
 
       {/* HEADER */}
       <header className="sticky top-0 z-50 bg-transparent flex-shrink-0">
@@ -60,10 +59,10 @@ export default function FoyerLayout({
 
       {/* SCROLLABLE AREA */}
       <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden">
-        <div className="w-full max-w-4xl mx-auto px-6 py-4 min-h-full">
+        <div className="w-full max-w-4xl mx-auto px-6 py-4">
           {children}
         </div>
-        <footer className="w-full max-w-4xl mx-auto px-6 pt-2" style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom))" }}>
+        <footer className="w-full max-w-4xl mx-auto px-6 pb-6 pt-2">
           <Separator style={{ backgroundColor: "hsl(212, 71%, 85.3%)" }} className="mb-4" />
           <div className="flex justify-center gap-6 pb-3">
             <a href="https://www.facebook.com/share/1Ah9cGwFNy/" target="_blank" rel="noopener noreferrer" className="bg-black rounded-md p-1.5">
@@ -78,7 +77,6 @@ export default function FoyerLayout({
           </p>
         </footer>
       </main>
-
 
     </div>
   );
