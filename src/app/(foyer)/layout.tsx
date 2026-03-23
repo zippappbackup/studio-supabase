@@ -32,7 +32,7 @@ export default function FoyerLayout({
   }, [pathname]);
 
   return (
-    <div className="flex flex-col h-dvh overflow-hidden w-full">
+    <div className="flex flex-col h-full overflow-hidden w-full">
 
       {/* HEADER */}
       <header className="sticky top-0 z-50 bg-transparent flex-shrink-0">
