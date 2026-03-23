@@ -58,7 +58,7 @@ export default function FoyerLayout({
       </header>
 
       {/* SCROLLABLE AREA */}
-      <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden">
+      <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden" style={{ WebkitOverflowScrolling: "touch" }}>
         <div className="w-full max-w-4xl mx-auto px-6 py-4">
           {children}
         </div>
