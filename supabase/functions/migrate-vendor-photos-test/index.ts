@@ -1,4 +1,5 @@
 // TEST MIGRATION TOOL - Processes exactly 1 vendor, ALL photos
+// Uses Google Places Details API to get fresh photo references
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -7,12 +8,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-function extractPhotoReference(url: string): string | null {
-  try {
-    return new URL(url).searchParams.get('photoreference');
-  } catch {
-    return null;
-  }
+async function getFreshPhotoReferences(placeId: string, apiKey: string): Promise<string[]> {
+  const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=photos&key=${apiKey}`
+  const response = await fetch(url)
+  if (!response.ok) throw new Error(`Places API error: ${response.status}`)
+  
+  const data = await response.json()
+  if (data.status !== 'OK') throw new Error(`Places API status: ${data.status} - ${data.error_message || ''}`)
+  if (!data.result?.photos) return []
+  
+  return data.result.photos.map((p: any) => p.photo_reference)
 }
 
 serve(async (req) => {
@@ -33,23 +38,17 @@ serve(async (req) => {
 
     // Verify admin
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
+    if (!authHeader) throw new Error('Unauthorized')
 
     const token = authHeader.replace('Bearer ', '')
     const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
+    if (authError || !user) throw new Error('Unauthorized')
 
     const { data: userData } = await supabase.from('users').select('role').eq('uid', user.id).single()
-    if (!userData || userData.role !== 'admin') {
-      return new Response(JSON.stringify({ error: 'Admin access required' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
+    if (!userData || userData.role !== 'admin') throw new Error('Admin access required')
 
-    // Get exactly 1 vendor with unmigrated Google photo URLs
-    logs.push('[TEST] Fetching 1 vendor with Google photos...')
+    // Get exactly 1 vendor with Google Place ID
+    logs.push('[TEST] Fetching 1 vendor...')
     const { data: vendors, error: queryError } = await supabase
       .from('vendors')
       .select('vendor_id, name, photos')
@@ -59,55 +58,38 @@ serve(async (req) => {
       .limit(1)
 
     if (queryError) throw queryError
-    if (!vendors || vendors.length === 0) throw new Error('No vendors found with photos')
+    if (!vendors || vendors.length === 0) throw new Error('No vendors found')
 
-    // Find vendor with unmigrated photos (still pointing to Google)
-    const vendor = vendors.find((v: any) => 
-      Array.isArray(v.photos) && 
-      v.photos.length > 0 && 
-      typeof v.photos[0] === 'string' && 
-      v.photos[0].includes('maps.googleapis.com')
-    )
-
-    if (!vendor) throw new Error('No vendor found with unmigrated Google photos')
-
+    const vendor = vendors[0]
     logs.push(`[TEST] Selected vendor: ${vendor.name} (${vendor.vendor_id})`)
-    logs.push(`[TEST] Total photos to migrate: ${vendor.photos.length}`)
+
+    // Get FRESH photo references from Google Places API
+    logs.push('[TEST] Fetching fresh photo references from Google Places API...')
+    const photoReferences = await getFreshPhotoReferences(vendor.vendor_id, placesApiKey)
+    
+    if (photoReferences.length === 0) throw new Error('No photos found for this vendor on Google Places')
+    logs.push(`[TEST] Got ${photoReferences.length} fresh photo references from Google`)
 
     const newPhotoUrls: string[] = []
     let failCount = 0
 
-    for (let i = 0; i < vendor.photos.length; i++) {
-      const photoUrl = vendor.photos[i]
+    for (let i = 0; i < photoReferences.length; i++) {
+      const photoRef = photoReferences[i]
+      const freshUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1600&photoreference=${photoRef}&key=${placesApiKey}`
 
-      if (!photoUrl || typeof photoUrl !== 'string') {
-        logs.push(`[TEST] Photo ${i + 1}/${vendor.photos.length}: SKIPPED - invalid URL`)
-        failCount++
-        continue
-      }
-
-      const photoReference = extractPhotoReference(photoUrl)
-      if (!photoReference) {
-        logs.push(`[TEST] Photo ${i + 1}/${vendor.photos.length}: SKIPPED - no photo reference`)
-        failCount++
-        continue
-      }
-
-      const freshUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1600&photoreference=${photoReference}&key=${placesApiKey}`
-
-      logs.push(`[TEST] Photo ${i + 1}/${vendor.photos.length}: Downloading...`)
+      logs.push(`[TEST] Photo ${i + 1}/${photoReferences.length}: Downloading...`)
       const photoResponse = await fetch(freshUrl)
 
       if (!photoResponse.ok) {
-        logs.push(`[TEST] Photo ${i + 1}/${vendor.photos.length}: FAILED - HTTP ${photoResponse.status}`)
+        logs.push(`[TEST] Photo ${i + 1}/${photoReferences.length}: FAILED - HTTP ${photoResponse.status}`)
         failCount++
         continue
       }
 
       const photoBuffer = new Uint8Array(await photoResponse.arrayBuffer())
-      logs.push(`[TEST] Photo ${i + 1}/${vendor.photos.length}: Downloaded ${photoBuffer.length} bytes`)
+      logs.push(`[TEST] Photo ${i + 1}/${photoReferences.length}: Downloaded ${photoBuffer.length} bytes`)
 
-      const fileName = `vendor-photos/${vendor.vendor_id}/${photoReference.substring(0, 40)}.jpg`
+      const fileName = `vendor-photos/${vendor.vendor_id}/${photoRef.substring(0, 40)}.jpg`
       const { error: uploadError } = await supabase.storage
         .from('uploads')
         .upload(fileName, photoBuffer, {
@@ -117,23 +99,24 @@ serve(async (req) => {
         })
 
       if (uploadError) {
-        logs.push(`[TEST] Photo ${i + 1}/${vendor.photos.length}: UPLOAD FAILED - ${uploadError.message}`)
+        logs.push(`[TEST] Photo ${i + 1}/${photoReferences.length}: UPLOAD FAILED - ${uploadError.message}`)
         failCount++
         continue
       }
 
       const { data: urlData } = supabase.storage.from('uploads').getPublicUrl(fileName)
       newPhotoUrls.push(urlData.publicUrl)
-      logs.push(`[TEST] Photo ${i + 1}/${vendor.photos.length}: SUCCESS`)
+      logs.push(`[TEST] Photo ${i + 1}/${photoReferences.length}: SUCCESS - stored in Supabase`)
 
-      // Small delay between photos to avoid rate limiting
-      if (i < vendor.photos.length - 1) {
+      // Delay between downloads to avoid rate limiting
+      if (i < photoReferences.length - 1) {
         await new Promise(resolve => setTimeout(resolve, 300))
       }
     }
 
     if (newPhotoUrls.length === 0) throw new Error('No photos were successfully migrated')
 
+    // Update vendor with new Supabase URLs
     const { error: updateError } = await supabase
       .from('vendors')
       .update({ photos: newPhotoUrls, updated_at: new Date().toISOString() })
@@ -142,10 +125,10 @@ serve(async (req) => {
     if (updateError) throw new Error(`DB update failed: ${updateError.message}`)
 
     logs.push(`[TEST] DB updated successfully`)
-    logs.push(`[TEST] COMPLETE: ${newPhotoUrls.length} migrated, ${failCount} failed out of ${vendor.photos.length} total`)
+    logs.push(`[TEST] COMPLETE: ${newPhotoUrls.length} migrated, ${failCount} failed out of ${photoReferences.length} total`)
 
     return new Response(
-      JSON.stringify({ data: { success: true, message: `Test complete! ${newPhotoUrls.length}/${vendor.photos.length} photos migrated for ${vendor.name}.`, logs } }),
+      JSON.stringify({ data: { success: true, message: `Test complete! ${newPhotoUrls.length}/${photoReferences.length} photos migrated for ${vendor.name}.`, logs } }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
