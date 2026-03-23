@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import "@/app/globals.css";
 import Logo from "@/components/core/Logo";
 import { Button } from "@/components/ui/button";
@@ -22,8 +22,21 @@ export default function AuthLayout({
     { href: "/contact", label: "Contact" },
   ];
 
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const setHeight = () => {
+      if (containerRef.current) {
+        containerRef.current.style.height = `${window.innerHeight}px`;
+      }
+    };
+    setHeight();
+    window.addEventListener('resize', setHeight);
+    return () => window.removeEventListener('resize', setHeight);
+  }, []);
+
   return (
-    <div className="flex flex-col h-dvh overflow-hidden w-full">
+    <div ref={containerRef} className="flex flex-col w-full" style={{ height: "100dvh" }}>
 
       {/* HEADER — sticky, transparent, never scrolls away */}
       <header className="sticky top-0 z-50 bg-transparent flex-shrink-0">
