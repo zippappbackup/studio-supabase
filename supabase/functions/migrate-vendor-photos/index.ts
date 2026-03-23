@@ -65,7 +65,7 @@ serve(async (req) => {
       .like('vendor_id', 'ChIJ%')
       .not('photos', 'is', null)
       .not('photos', 'eq', '[]')
-      .like('photos->0', '%maps.googleapis.com%')
+      .filter('photos->0', 'like', '%maps.googleapis.com%')
 
     logs.push(`Total unmigrated vendors remaining: ${totalRemaining}`)
 
@@ -83,7 +83,7 @@ serve(async (req) => {
       .like('vendor_id', 'ChIJ%')
       .not('photos', 'is', null)
       .not('photos', 'eq', '[]')
-      .like('photos->0', '%maps.googleapis.com%')
+      .filter('photos->0', 'like', '%maps.googleapis.com%')
       .limit(limit)
 
     if (queryError) throw queryError
@@ -196,7 +196,7 @@ serve(async (req) => {
       .like('vendor_id', 'ChIJ%')
       .not('photos', 'is', null)
       .not('photos', 'eq', '[]')
-      .like('photos->0', '%maps.googleapis.com%')
+      .filter('photos->0', 'like', '%maps.googleapis.com%')
 
     logs.push(`Batch complete. Processed: ${processedCount}, Failed: ${failedCount}, Remaining: ${newRemaining}`)
 

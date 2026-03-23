@@ -28,7 +28,7 @@ export function PhotoMigrationCard() {
                 .like('vendor_id', 'ChIJ%')
                 .not('photos', 'is', null)
                 .not('photos', 'eq', '[]')
-                .like('photos->0', '%maps.googleapis.com%');
+                .filter('photos->0', 'like', '%maps.googleapis.com%');
             setTotalRemaining(count || 0);
             setTotalVendors(count || 0);
         };
