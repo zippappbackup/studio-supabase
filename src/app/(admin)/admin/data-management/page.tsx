@@ -14,7 +14,6 @@ import { VendorActions } from './VendorActions';
 import { Button } from '@/components/ui/button';
 import { DataImporterClientPage } from './DataImporterClientPage';
 import { PhotoMigrationCard } from './PhotoMigrationCard';
-import { PhotoMigrationTestCard } from './PhotoMigrationTestCard';
 import { VendorSummaryDialog } from './VendorSummaryDialog';
 
 const VENDORS_PER_PAGE = 15;
@@ -25,6 +24,13 @@ export default function DataManagementPage() {
     []
   );
   const { data: liveVendorsData, isLoading: isVendorDataLoading } = useSupabaseCollection<Vendor>(vendorsQuery);
+  const [vendorCount, setVendorCount] = useState<number>(0);
+
+  useEffect(() => {
+    supabase.from('vendors').select('*', { count: 'exact', head: true }).then(({ count }) => {
+      setVendorCount(count || 0);
+    });
+  }, []);
 
   // Transform vendor data to match expected format (vendor_id -> id)
   const liveVendors = useMemo(() => {
@@ -94,7 +100,6 @@ export default function DataManagementPage() {
       <DataImporterClientPage />
 
       {/* Photo Migration Tool */}
-      <PhotoMigrationTestCard />
       <PhotoMigrationCard />
 
       {/* Live Vendor Browser */}
@@ -102,7 +107,7 @@ export default function DataManagementPage() {
         <CardHeader>
           <CardTitle>Live Vendor Database</CardTitle>
           <CardDescription>
-            Browse all vendors currently in the database ({liveVendors.length} total). Use search to filter by name, address, phone, or email.
+            Browse all vendors currently in the database ({vendorCount} total, showing {liveVendors.length}). Use search to filter by name, address, phone, or email.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
