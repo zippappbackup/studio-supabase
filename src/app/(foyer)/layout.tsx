@@ -23,28 +23,7 @@ export default function FoyerLayout({
   ];
 
   const mainRef = useRef<HTMLElement>(null);
-  const [debugInfo, setDebugInfo] = React.useState<string>('');
 
-  useEffect(() => {
-    const update = () => {
-      const el = document.createElement('div');
-      el.style.paddingBottom = 'env(safe-area-inset-bottom)';
-      document.body.appendChild(el);
-      const safeBottom = getComputedStyle(el).paddingBottom;
-      document.body.removeChild(el);
-      setDebugInfo(
-        `win-h:${window.innerHeight} ` +
-        `doc-h:${document.documentElement.clientHeight} ` +
-        `main-scroll:${mainRef.current?.scrollHeight || 0} ` +
-        `main-client:${mainRef.current?.clientHeight || 0} ` +
-        `safe-b:${safeBottom} ` +
-        `footer-h:${document.querySelector('footer')?.clientHeight || 0}`
-      );
-    };
-    update();
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
-  }, []);
 
   useEffect(() => {
     if (mainRef.current) {
@@ -100,22 +79,7 @@ export default function FoyerLayout({
         </footer>
       </main>
 
-      {/* DEBUG OVERLAY - REMOVE AFTER FIXING */}
-      <div style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        background: 'rgba(0,0,0,0.8)',
-        color: 'white',
-        fontSize: '10px',
-        padding: '4px 8px',
-        zIndex: 9999,
-        fontFamily: 'monospace',
-        wordBreak: 'break-all'
-      }}>
-        {debugInfo}
-      </div>
+
     </div>
   );
 }

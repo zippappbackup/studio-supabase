@@ -22,7 +22,7 @@ export default function ForVendorsPage() {
   ];
 
   return (
-    <div className="w-full space-y-8 text-center">
+    <div className="w-full space-y-8 text-center pb-16">
       {/* Hero Section */}
       <section>
         <h1 className="text-3xl font-bold leading-tight tracking-tighter">

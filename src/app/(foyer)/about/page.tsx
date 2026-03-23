@@ -7,7 +7,7 @@ import Link from 'next/link';
 
 export default function AboutPage() {
   return (
-    <div className="w-full space-y-2 text-center">
+    <div className="w-full space-y-2 text-center pb-16">
       <section className="space-y-4">
         <h1 className="text-3xl font-bold leading-tight tracking-tighter">
           Our Mission: To Make Life Easier

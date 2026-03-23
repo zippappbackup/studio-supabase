@@ -66,7 +66,7 @@ export default function ContactPage() {
   };
 
   return (
-    <div className="w-full space-y-8">
+    <div className="w-full space-y-8 pb-16">
       <section className="space-y-4 text-center">
         <h1 className="text-3xl font-bold leading-tight tracking-tighter">
           Get In Touch With Us

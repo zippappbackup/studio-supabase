@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 
 export default function WelcomePage() {
   return (
-    <div className="w-full space-y-2 text-center">
+    <div className="w-full space-y-2 text-center pb-16">
       {/* Hero Section */}
       <section className="space-y-4">
         <h1 className="text-3xl font-bold leading-tight tracking-tighter">
