@@ -36,26 +36,34 @@ export function PhotoMigrationTestCard() {
 
             setLogs(prev => [...prev, "Calling test migration function..."]);
 
-            const { data, error } = await supabase.functions.invoke('migrate-vendor-photos-test', {
+            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+            const response = await fetch(`${supabaseUrl}/functions/v1/migrate-vendor-photos-test`, {
+                method: 'POST',
                 headers: {
-                    Authorization: `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`,
                 },
+                body: JSON.stringify({}),
             });
 
-            if (error) throw error;
+            const result = await response.json();
 
-            if (data?.data?.logs) {
-                setLogs(data.data.logs);
+            if (!response.ok) {
+                throw new Error(result.error || `HTTP ${response.status}`);
             }
 
-            if (data?.data?.success) {
+            if (result?.data?.logs) {
+                setLogs(result.data.logs);
+            }
+
+            if (result?.data?.success) {
                 toast({
                     title: "Test Migration Successful!",
-                    description: data.data.message,
+                    description: result.data.message,
                     variant: "success",
                 });
             } else {
-                throw new Error(data?.data?.message || "Test failed");
+                throw new Error(result?.data?.message || "Test failed");
             }
 
         } catch (err: any) {
