@@ -22,15 +22,9 @@ export function PhotoMigrationCard() {
     // Fetch initial remaining count on mount
     useEffect(() => {
         const fetchCount = async () => {
-            const { count } = await supabase
-                .from('vendors')
-                .select('*', { count: 'exact', head: true })
-                .like('vendor_id', 'ChIJ%')
-                .not('photos', 'is', null)
-                .not('photos', 'eq', '[]')
-                .filter('photos::text', 'like', '%maps.googleapis.com%');
-            setTotalRemaining(count || 0);
-            setTotalVendors(count || 0);
+            const { data: count } = await supabase.rpc('get_unmigrated_vendors_count');
+            setTotalRemaining((count as number) || 0);
+            setTotalVendors((count as number) || 0);
         };
         fetchCount();
     }, []);

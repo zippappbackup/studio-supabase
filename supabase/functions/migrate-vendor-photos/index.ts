@@ -59,13 +59,8 @@ serve(async (req) => {
     logs.push(`Starting batch of ${limit} vendors...`)
 
     // Get total count of unmigrated vendors
-    const { count: totalRemaining } = await supabase
-      .from('vendors')
-      .select('*', { count: 'exact', head: true })
-      .like('vendor_id', 'ChIJ%')
-      .not('photos', 'is', null)
-      .not('photos', 'eq', '[]')
-      .filter('photos::text', 'like', '%maps.googleapis.com%')
+    const { data: countData } = await supabase.rpc('get_unmigrated_vendors_count')
+    const totalRemaining = countData as number
 
     logs.push(`Total unmigrated vendors remaining: ${totalRemaining}`)
 
@@ -77,14 +72,7 @@ serve(async (req) => {
     }
 
     // Get next batch of unmigrated vendors - always offset 0 since filter excludes migrated ones
-    const { data: vendors, error: queryError } = await supabase
-      .from('vendors')
-      .select('vendor_id, name, photos')
-      .like('vendor_id', 'ChIJ%')
-      .not('photos', 'is', null)
-      .not('photos', 'eq', '[]')
-      .filter('photos::text', 'like', '%maps.googleapis.com%')
-      .limit(limit)
+    const { data: vendors, error: queryError } = await supabase.rpc('get_unmigrated_vendors', { batch_limit: limit })
 
     if (queryError) throw queryError
     if (!vendors || vendors.length === 0) {
@@ -190,13 +178,8 @@ serve(async (req) => {
     }
 
     // Get updated remaining count after this batch
-    const { count: newRemaining } = await supabase
-      .from('vendors')
-      .select('*', { count: 'exact', head: true })
-      .like('vendor_id', 'ChIJ%')
-      .not('photos', 'is', null)
-      .not('photos', 'eq', '[]')
-      .filter('photos::text', 'like', '%maps.googleapis.com%')
+    const { data: newRemainingData } = await supabase.rpc('get_unmigrated_vendors_count')
+    const newRemaining = newRemainingData as number
 
     logs.push(`Batch complete. Processed: ${processedCount}, Failed: ${failedCount}, Remaining: ${newRemaining}`)
 
