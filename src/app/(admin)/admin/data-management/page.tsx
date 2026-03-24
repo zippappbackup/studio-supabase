@@ -107,7 +107,7 @@ export default function DataManagementPage() {
         <CardHeader>
           <CardTitle>Live Vendor Database</CardTitle>
           <CardDescription>
-            Browse all vendors currently in the database ({vendorCount} total, showing {liveVendors.length}). Use search to filter by name, address, phone, or email.
+            Browse all vendors currently in the database ({vendorCount} total). Use search to filter by name, address, phone, or email.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
