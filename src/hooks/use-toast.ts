@@ -153,7 +153,7 @@ function toast({ ...props }: Toast) {
   const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
 
   // Auto-dismiss after 1 second
-  setTimeout(() => dismiss(), 1000)
+  setTimeout(() => dismiss(), 2000)
 
   dispatch({
     type: "ADD_TOAST",
