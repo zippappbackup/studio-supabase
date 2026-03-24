@@ -14,6 +14,7 @@ import { VendorActions } from './VendorActions';
 import { Button } from '@/components/ui/button';
 import { DataImporterClientPage } from './DataImporterClientPage';
 import { PhotoMigrationCard } from './PhotoMigrationCard';
+import { UserDataCard } from './UserDataCard';
 import { VendorSummaryDialog } from './VendorSummaryDialog';
 
 const VENDORS_PER_PAGE = 15;
@@ -100,6 +101,7 @@ export default function DataManagementPage() {
       <DataImporterClientPage />
 
       {/* Photo Migration Tool */}
+      <UserDataCard />
       <PhotoMigrationCard />
 
       {/* Live Vendor Browser */}
