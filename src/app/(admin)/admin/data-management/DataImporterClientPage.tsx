@@ -185,13 +185,23 @@ export function DataImporterClientPage() {
         toast({ title: "Exporting Live Data", description: "Fetching all vendors from the database. This may take a moment...", variant: "info" });
     
         try {
-            // Fetch all vendors from Supabase
-            const { data: vendors, error } = await supabase
-                .from('vendors')
-                .select('*')
-                .order('name');
-
-            if (error) throw error;
+            // Fetch all vendors in batches to bypass 1000 row limit
+            let allVendors: any[] = [];
+            let from = 0;
+            const BATCH = 500;
+            while (true) {
+                const { data: batch, error } = await supabase
+                    .from('vendors')
+                    .select('*')
+                    .order('name')
+                    .range(from, from + BATCH - 1);
+                if (error) throw error;
+                if (!batch || batch.length === 0) break;
+                allVendors = [...allVendors, ...batch];
+                if (batch.length < BATCH) break;
+                from += BATCH;
+            }
+            const vendors = allVendors;
     
             if (!vendors || vendors.length === 0) {
                 toast({ title: "Export Complete", description: "No vendors found in the database." });
