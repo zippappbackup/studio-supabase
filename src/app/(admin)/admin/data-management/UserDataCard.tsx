@@ -4,12 +4,20 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Download } from "lucide-react";
+import { Loader2, Download, BookOpen } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 export function UserDataCard() {
     const { toast } = useToast();
     const [isExporting, setIsExporting] = useState(false);
+    const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
 
     const handleExport = async () => {
         setIsExporting(true);
@@ -86,7 +94,51 @@ export function UserDataCard() {
                         Export All User Data
                     </Button>
                 </div>
+            <div className="space-y-3 p-4 border rounded-lg bg-background mt-4">
+                    <p className="text-sm text-muted-foreground">
+                        Back up Supabase Authentication data including all registered user accounts.
+                    </p>
+                    <Button onClick={() => setIsInstructionsOpen(true)} variant="outline" className="w-full sm:w-auto">
+                        <BookOpen className="mr-2 h-4 w-4" />
+                        Instructions to Backup Supabase User Authentication
+                    </Button>
+                </div>
             </CardContent>
+
+            <Dialog open={isInstructionsOpen} onOpenChange={setIsInstructionsOpen}>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>How to Backup Supabase User Authentication</DialogTitle>
+                        <DialogDescription>Follow these steps to export all authentication data from Supabase.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 text-sm">
+                        <div className="space-y-1">
+                            <p className="font-semibold">Step 1 — Log in to Supabase Dashboard</p>
+                            <p className="text-muted-foreground">Go to <span className="font-mono text-accent">https://supabase.com/dashboard</span> and select your project.</p>
+                        </div>
+                        <div className="space-y-1">
+                            <p className="font-semibold">Step 2 — Go to Project Settings</p>
+                            <p className="text-muted-foreground">Click on <span className="font-semibold">Settings</span> in the left sidebar, then select <span className="font-semibold">Database</span>.</p>
+                        </div>
+                        <div className="space-y-1">
+                            <p className="font-semibold">Step 3 — Download a Database Backup</p>
+                            <p className="text-muted-foreground">Scroll down to find the <span className="font-semibold">Backups</span> section. Click <span className="font-semibold">Download backup</span>. This includes the full PostgreSQL dump with all authentication data in the <span className="font-mono">auth.users</span> table.</p>
+                        </div>
+                        <div className="space-y-1">
+                            <p className="font-semibold">Step 4 — Store the backup securely</p>
+                            <p className="text-muted-foreground">Save the downloaded file in a secure location such as an encrypted drive or secure cloud storage. Do not share this file as it contains sensitive user data.</p>
+                        </div>
+                        <div className="space-y-1">
+                            <p className="font-semibold">Step 5 — Automatic Backups (Recommended)</p>
+                            <p className="text-muted-foreground">Supabase automatically creates daily backups on the Pro plan and weekly backups on the Free plan. Consider upgrading to Pro for more frequent backups and Point-in-Time Recovery.</p>
+                        </div>
+                        <div className="rounded-md bg-amber-50 border border-amber-200 p-3">
+                            <p className="text-amber-800 font-medium text-xs">⚠️ Important Note</p>
+                            <p className="text-amber-700 text-xs mt-1">Password hashes are specific to Supabase's authentication system. If migrating to another platform, users will need to reset their passwords. The User Data export above captures all public profile data separately.</p>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </Card>
     );
 }
