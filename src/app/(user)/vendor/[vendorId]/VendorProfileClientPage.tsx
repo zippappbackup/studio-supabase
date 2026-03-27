@@ -310,11 +310,9 @@ export function VendorProfileClientPage({ vendorId }: { vendorId: string }) {
   const [hasSubmittedReview, setHasSubmittedReview] = useState(false);
   const [reviewsRefreshKey, setReviewsRefreshKey] = useState(0);
 
-  const vendorQuery = useMemo(
-    () => vendorId ? () => supabase.from('vendors').select('*').eq('vendor_id', vendorId).single() : () => null,
-    [vendorId]
-  );
-  const { data: liveVendor, isLoading: isLiveVendorLoading } = useSupabaseDoc<Vendor>(vendorQuery);
+  // No live query - snapshot has all data including reviews/offerings
+  const liveVendor = null;
+  const isLiveVendorLoading = false;
 
   // Fetch reviews separately to avoid 406 errors from PostgREST join
   const reviewsQuery = useMemo(

@@ -99,7 +99,7 @@ export function AppCacheProvider({ children }: { children: ReactNode }) {
           while (true) {
             const { data: batch, error: vendorError } = await supabase
               .from('vendors')
-              .select('vendor_id, name, normalized_name, searchable_name, category_id, logo_url, description, region, lat, lng, address, phone, email, website, google_rating, google_review_count, zipp_rating, zipp_review_count, tags, matched_keywords, modules_enabled, subscription_status, photos, promotions, business_status')
+              .select('vendor_id, name, normalized_name, searchable_name, category_id, logo_url, description, region, lat, lng, address, phone, email, website, google_rating, google_review_count, zipp_rating, zipp_review_count, tags, matched_keywords, modules_enabled, subscription_status, photos, promotions, reviews, offerings, business_status')
               .order('name')
               .range(from, from + batchSize - 1);
             
@@ -137,8 +137,10 @@ export function AppCacheProvider({ children }: { children: ReactNode }) {
             matchedKeywords: v.matched_keywords,
             modulesEnabled: v.modules_enabled,
             subscriptionStatus: v.subscription_status,
-            photos: (v.photos || []).slice(0, 1),
+            photos: v.photos || [],
             promotions: v.promotions || [],
+            reviews: v.reviews || [],
+            offerings: v.offerings || [],
             businessStatus: v.business_status,
           })) as Vendor[];
         }
