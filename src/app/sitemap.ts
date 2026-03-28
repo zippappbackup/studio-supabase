@@ -7,19 +7,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://studio-supabase.pages.dev';
 
   // 1. Static Pages
-  const staticRoutes = ['/welcome', '/home', '/search', '/login', '/signup', '/partners', '/about', '/contact'].map((route) => ({
+  const staticRoutes: MetadataRoute.Sitemap = ['/welcome', '/home', '/search', '/login', '/signup', '/partners', '/about', '/contact'].map((route) => ({
     url: `${baseUrl}${route}`,
     lastModified: new Date().toISOString(),
     changeFrequency: 'monthly' as const,
     priority: route === '/welcome' ? 1.0 : 0.8,
   }));
 
+  // BUILD GUARD: If keys are missing during build, return static routes only
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    console.warn("⚠️ Sitemap Build Guard: Missing Supabase keys, skipping dynamic routes.");
+    return staticRoutes;
+  }
+
   // 2. Dynamic Vendor Pages
   let vendorRoutes: MetadataRoute.Sitemap = [];
   try {
     const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     );
 
     const { data: vendors } = await supabase
