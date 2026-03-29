@@ -16,15 +16,11 @@ import { DataImporterClientPage } from './DataImporterClientPage';
 import { PhotoMigrationCard } from './PhotoMigrationCard';
 import { UserDataCard } from './UserDataCard';
 import { VendorSummaryDialog } from './VendorSummaryDialog';
-import { CategoryMigrator } from './CategoryMigrator';
 
 const VENDORS_PER_PAGE = 15;
 
 export default function DataManagementPage() {
-  const vendorsQuery = useMemo(
-    () => () => supabase.from('vendors').select('*').order('name'),
-    []
-  );
+  const vendorsQuery = useMemo(() => () => supabase.from('vendors').select('*').order('name'), []);
   const { data: liveVendorsData, isLoading: isVendorDataLoading } = useSupabaseCollection<Vendor>(vendorsQuery);
   const [vendorCount, setVendorCount] = useState<number>(0);
 
@@ -64,12 +60,6 @@ export default function DataManagementPage() {
     return filteredVendors.slice(startIndex, startIndex + VENDORS_PER_PAGE);
   }, [filteredVendors, currentPage]);
 
-  useEffect(() => {
-      if (currentPage > totalPages && totalPages > 0) {
-          setCurrentPage(1);
-      }
-  }, [currentPage, totalPages]);
-
   const handleEdit = (vendor: Vendor) => {
     setSelectedVendorId(vendor.id);
     setIsEditDialogOpen(true);
@@ -91,33 +81,26 @@ export default function DataManagementPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Data Management</h1>
-          <p className="text-muted-foreground">
-            Manage vendor data, import new vendors, and perform photo backups.
-          </p>
+          <p className="text-muted-foreground">Manage vendor data and photo backups.</p>
         </div>
       </div>
 
-      {/* Data Importer Section */}
       <DataImporterClientPage />
 
-      {/* Photo Backup & Sync Tools */}
       <div className="grid gap-4">
         <h2 className="text-xl font-semibold">Photo Backup & Migration</h2>
-        <CategoryMigrator />
+        {/* We will add a working backup card here next */}
         <PhotoMigrationCard />
         <UserDataCard />
       </div>
 
-      {/* Live Vendor Browser */}
       <Card>
         <CardHeader>
           <CardTitle>Live Vendor Database</CardTitle>
-          <CardDescription>
-            Browse all vendors currently in the database ({vendorCount} total).
-          </CardDescription>
+          <CardDescription>Browse all vendors in Supabase ({vendorCount} total).</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="relative">
+        <CardContent>
+          <div className="relative mb-4">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search vendors..."
@@ -128,16 +111,13 @@ export default function DataManagementPage() {
           </div>
 
           {isVendorDataLoading ? (
-            <div className="flex items-center justify-center h-48">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
+            <div className="flex items-center justify-center h-48"><Loader2 className="h-8 w-8 animate-spin" /></div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Address</TableHead>
-                  <TableHead>Phone</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -145,8 +125,7 @@ export default function DataManagementPage() {
                 {paginatedVendors.map((vendor) => (
                   <TableRow key={vendor.id}>
                     <TableCell className="font-medium">{vendor.name}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{vendor.address || 'N/A'}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{vendor.phone || 'N/A'}</TableCell>
+                    <TableCell className="text-sm">{vendor.address || 'N/A'}</TableCell>
                     <TableCell className="text-right">
                       <VendorActions vendor={vendor} onEdit={handleEdit} onViewSummary={handleViewSummary} />
                     </TableCell>
@@ -158,19 +137,10 @@ export default function DataManagementPage() {
         </CardContent>
       </Card>
 
-      {/* Dialogs */}
       {selectedVendorId && (
         <>
-          <VendorEditDialog
-            vendorId={selectedVendorId}
-            open={isEditDialogOpen}
-            onOpenChange={setIsEditDialogOpen}
-          />
-          <VendorSummaryDialog
-            vendorId={selectedVendorId}
-            open={isSummaryDialogOpen}
-            onOpenChange={setIsSummaryDialogOpen}
-          />
+          <VendorEditDialog vendorId={selectedVendorId} open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} />
+          <VendorSummaryDialog vendorId={selectedVendorId} open={isSummaryDialogOpen} onOpenChange={setIsSummaryDialogOpen} />
         </>
       )}
     </div>
