@@ -15,7 +15,6 @@ import { Button } from '@/components/ui/button';
 import { DataImporterClientPage } from './DataImporterClientPage';
 import { PhotoMigrationCard } from './PhotoMigrationCard';
 import { BackupTool } from "./BackupTool";
-import { BackupTool } from "./BackupTool";
 import { UserDataCard } from './UserDataCard';
 import { VendorSummaryDialog } from './VendorSummaryDialog';
 
