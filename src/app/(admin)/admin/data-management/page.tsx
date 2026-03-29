@@ -14,6 +14,8 @@ import { VendorActions } from './VendorActions';
 import { Button } from '@/components/ui/button';
 import { DataImporterClientPage } from './DataImporterClientPage';
 import { PhotoMigrationCard } from './PhotoMigrationCard';
+import { BackupTool } from "./BackupTool";
+import { BackupTool } from "./BackupTool";
 import { UserDataCard } from './UserDataCard';
 import { VendorSummaryDialog } from './VendorSummaryDialog';
 
@@ -91,6 +93,7 @@ export default function DataManagementPage() {
         <h2 className="text-xl font-semibold">Photo Backup & Migration</h2>
         {/* We will add a working backup card here next */}
         <PhotoMigrationCard />
+      <BackupTool />
         <UserDataCard />
       </div>
 
