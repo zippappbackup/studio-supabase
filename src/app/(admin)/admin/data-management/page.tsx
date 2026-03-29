@@ -16,6 +16,7 @@ import { DataImporterClientPage } from './DataImporterClientPage';
 import { PhotoMigrationCard } from './PhotoMigrationCard';
 import { UserDataCard } from './UserDataCard';
 import { VendorSummaryDialog } from './VendorSummaryDialog';
+import { CategoryMigrator } from './CategoryMigrator';
 
 const VENDORS_PER_PAGE = 15;
 
@@ -33,7 +34,6 @@ export default function DataManagementPage() {
     });
   }, []);
 
-  // Transform vendor data to match expected format (vendor_id -> id)
   const liveVendors = useMemo(() => {
     return liveVendorsData?.map(v => ({ ...v, id: v.vendor_id || v.id })) || [];
   }, [liveVendorsData]);
@@ -92,7 +92,7 @@ export default function DataManagementPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Data Management</h1>
           <p className="text-muted-foreground">
-            Manage vendor data, import new vendors, export database backups, and migrate photos.
+            Manage vendor data, import new vendors, and perform photo backups.
           </p>
         </div>
       </div>
@@ -100,16 +100,20 @@ export default function DataManagementPage() {
       {/* Data Importer Section */}
       <DataImporterClientPage />
 
-      {/* Photo Migration Tool */}
-      <UserDataCard />
-      <PhotoMigrationCard />
+      {/* Photo Backup & Sync Tools */}
+      <div className="grid gap-4">
+        <h2 className="text-xl font-semibold">Photo Backup & Migration</h2>
+        <CategoryMigrator />
+        <PhotoMigrationCard />
+        <UserDataCard />
+      </div>
 
       {/* Live Vendor Browser */}
       <Card>
         <CardHeader>
           <CardTitle>Live Vendor Database</CardTitle>
           <CardDescription>
-            Browse all vendors currently in the database ({vendorCount} total). Use search to filter by name, address, phone, or email.
+            Browse all vendors currently in the database ({vendorCount} total).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -138,53 +142,18 @@ export default function DataManagementPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedVendors.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">
-                      {searchQuery ? 'No vendors found matching your search.' : 'No vendors in database.'}
+                {paginatedVendors.map((vendor) => (
+                  <TableRow key={vendor.id}>
+                    <TableCell className="font-medium">{vendor.name}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{vendor.address || 'N/A'}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{vendor.phone || 'N/A'}</TableCell>
+                    <TableCell className="text-right">
+                      <VendorActions vendor={vendor} onEdit={handleEdit} onViewSummary={handleViewSummary} />
                     </TableCell>
                   </TableRow>
-                ) : (
-                  paginatedVendors.map((vendor) => (
-                    <TableRow key={vendor.id}>
-                      <TableCell className="font-medium">{vendor.name}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{vendor.address || 'N/A'}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{vendor.phone || 'N/A'}</TableCell>
-                      <TableCell className="text-right">
-                        <VendorActions vendor={vendor} onEdit={handleEdit} onViewSummary={handleViewSummary} />
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
+                ))}
               </TableBody>
             </Table>
-          )}
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between pt-4">
-              <p className="text-sm text-muted-foreground">
-                Page {currentPage} of {totalPages}
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
           )}
         </CardContent>
       </Card>
