@@ -5,10 +5,31 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { Image } from 'https://deno.land/x/imagescript@1.2.15/mod.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+const MAX_DIMENSION = 800
+const QUALITY = 70
+
+async function compressPhoto(buffer: Uint8Array): Promise<Uint8Array> {
+  try {
+    const image = await Image.decode(buffer)
+    if (image.width > MAX_DIMENSION || image.height > MAX_DIMENSION) {
+      if (image.width > image.height) {
+        image.resize(MAX_DIMENSION, Image.RESIZE_AUTO)
+      } else {
+        image.resize(Image.RESIZE_AUTO, MAX_DIMENSION)
+      }
+    }
+    return await image.encodeJPEG(QUALITY)
+  } catch (e) {
+    // fallback to original if compression fails
+    return buffer
+  }
 }
 
 async function getFreshPhotoReferences(placeId: string, apiKey: string): Promise<string[]> {
@@ -71,7 +92,7 @@ serve(async (req) => {
       )
     }
 
-    // Get next batch of unmigrated vendors - always offset 0 since filter excludes migrated ones
+    // Get next batch of unmigrated vendors
     const { data: vendors, error: queryError } = await supabase.rpc('get_unmigrated_vendors', { batch_limit: limit })
 
     if (queryError) throw queryError
@@ -105,14 +126,13 @@ serve(async (req) => {
 
       if (photoReferences.length === 0) {
         logs.push(`[${vendor.name}] SKIPPED - no photos on Google Places`)
-        // Set empty array so this vendor is excluded from future runs
         await supabase.from('vendors')
           .update({ photos: [], updated_at: new Date().toISOString() })
           .eq('vendor_id', vendor.vendor_id)
         continue
       }
 
-      logs.push(`[${vendor.name}] Got ${photoReferences.length} photos - downloading...`)
+      logs.push(`[${vendor.name}] Got ${photoReferences.length} photos - downloading & compressing...`)
 
       const newPhotoUrls: string[] = []
 
@@ -127,12 +147,18 @@ serve(async (req) => {
             continue
           }
 
+          // Download photo
           const photoBuffer = new Uint8Array(await photoResponse.arrayBuffer())
+
+          // Compress photo before uploading
+          const compressedBuffer = await compressPhoto(photoBuffer)
+          logs.push(`[${vendor.name}] Photo ${i + 1}: ${Math.round(photoBuffer.length / 1024)}KB → ${Math.round(compressedBuffer.length / 1024)}KB`)
+
           const fileName = `vendor-photos/${vendor.vendor_id}/${photoRef.substring(0, 40)}.jpg`
 
           const { error: uploadError } = await supabase.storage
             .from('uploads')
-            .upload(fileName, photoBuffer, {
+            .upload(fileName, compressedBuffer, {
               contentType: 'image/jpeg',
               upsert: true,
               cacheControl: '31536000',
@@ -146,7 +172,6 @@ serve(async (req) => {
           const { data: urlData } = supabase.storage.from('uploads').getPublicUrl(fileName)
           newPhotoUrls.push(urlData.publicUrl)
 
-          // Delay between photo downloads to avoid rate limiting
           if (i < photoReferences.length - 1) {
             await new Promise(resolve => setTimeout(resolve, 300))
           }
@@ -173,11 +198,9 @@ serve(async (req) => {
         failedCount++
       }
 
-      // Delay between vendors
       await new Promise(resolve => setTimeout(resolve, 500))
     }
 
-    // Get updated remaining count after this batch
     const { data: newRemainingData } = await supabase.rpc('get_unmigrated_vendors_count')
     const newRemaining = newRemainingData as number
 
