@@ -333,16 +333,37 @@ export function VendorProfileClientPage({ vendorId }: { vendorId: string }) {
     
     async function loadInitialData() {
         setIsLoading(true);
-        const snapshotVendor = await getVendorFromSnapshot(vendorId);
-        
+
+        // Load snapshot and live data in parallel
+        const [snapshotVendor, liveResult] = await Promise.all([
+            getVendorFromSnapshot(vendorId),
+            supabase
+                .from('vendors')
+                .select('operating_hours, phone, email, website, description, offerings, promotions')
+                .eq('vendor_id', vendorId)
+                .single()
+        ]);
+
         if (snapshotVendor) {
-            setVendorFromSnapshot(snapshotVendor);
+            // Merge live data into snapshot
+            const liveData = liveResult?.data || {};
+            console.log("LIVE DATA:", liveData);
+            setVendorFromSnapshot({
+                ...snapshotVendor,
+                operatingHours: liveData.operating_hours || null,
+                phone: liveData.phone || snapshotVendor.phone,
+                email: liveData.email || snapshotVendor.email,
+                website: liveData.website || snapshotVendor.website,
+                description: liveData.description || snapshotVendor.description,
+                offerings: liveData.offerings || [],
+                promotions: liveData.promotions || [],
+            } as any);
         }
         setIsLoading(false);
     }
     
     loadInitialData();
-  }, [vendorId, getVendorFromSnapshot, isVendorDataReady]);
+  }, [vendorId, getVendorFromSnapshot]);
 
   // Derived state: Merge snapshot and live data. Prioritize live data.
   // Transform snake_case from Supabase to camelCase expected by the UI
