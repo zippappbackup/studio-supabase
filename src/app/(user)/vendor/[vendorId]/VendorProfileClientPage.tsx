@@ -347,7 +347,6 @@ export function VendorProfileClientPage({ vendorId }: { vendorId: string }) {
         if (snapshotVendor) {
             // Merge live data into snapshot
             const liveData = liveResult?.data || {};
-            console.log("LIVE DATA:", liveData);
             setVendorFromSnapshot({
                 ...snapshotVendor,
                 operatingHours: liveData.operating_hours || null,
