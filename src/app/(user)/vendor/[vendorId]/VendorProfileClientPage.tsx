@@ -371,7 +371,7 @@ export function VendorProfileClientPage({ vendorId }: { vendorId: string }) {
       promotions: (source as any).promotions || [],
       photos: (source as any).photos || [],
     } as Vendor;
-  }, [vendorFromSnapshot, liveVendor]);
+  }, [vendorFromSnapshot, liveVendor, vendorReviews]);
 
 
   useEffect(() => {
