@@ -329,7 +329,7 @@ export function VendorProfileClientPage({ vendorId }: { vendorId: string }) {
 
   // Effect 1: Initial load from snapshot cache.
   useEffect(() => {
-    if (!vendorId || !isVendorDataReady) return;
+    if (!vendorId) return;
     
     async function loadInitialData() {
         setIsLoading(true);
