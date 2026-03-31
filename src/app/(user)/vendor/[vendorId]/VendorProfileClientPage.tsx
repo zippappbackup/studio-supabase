@@ -339,7 +339,7 @@ export function VendorProfileClientPage({ vendorId }: { vendorId: string }) {
             getVendorFromSnapshot(vendorId),
             supabase
                 .from('vendors')
-                .select('operating_hours, phone, email, website, description, offerings, promotions')
+                .select('operating_hours, phone, email, website, description, offerings, promotions, photos')
                 .eq('vendor_id', vendorId)
                 .single()
         ]);
@@ -356,6 +356,7 @@ export function VendorProfileClientPage({ vendorId }: { vendorId: string }) {
                 description: liveData.description || snapshotVendor.description,
                 offerings: liveData.offerings || [],
                 promotions: liveData.promotions || [],
+                photos: liveData.photos || snapshotVendor.photos || [],
             } as any);
         }
         setIsLoading(false);
