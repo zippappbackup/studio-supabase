@@ -220,6 +220,16 @@ export function VendorProfileForm({ onPublicViewClick }: VendorProfileFormProps)
             }
 
             toast({ title: "Profile Saved", description: "Your business information has been updated." });
+
+            // Trigger snapshot regeneration in background
+            fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/generate-vendor-snapshot`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+                },
+            }).catch(e => console.warn('Snapshot regeneration failed:', e));
+
         } catch (error) {
             console.error("Error updating vendor profile:", error);
             const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
