@@ -28,7 +28,6 @@ async function compressImage(file: File): Promise<File> {
       URL.revokeObjectURL(url);
       let { width, height } = img;
 
-      // Scale down if larger than MAX_DIMENSION
       if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
         if (width > height) {
           height = Math.round((height * MAX_DIMENSION) / width);
@@ -51,14 +50,14 @@ async function compressImage(file: File): Promise<File> {
             const compressed = new File([blob], file.name, { type: "image/jpeg" });
             resolve(compressed);
           } else {
-            resolve(file); // fallback to original if compression fails
+            resolve(file);
           }
         },
         "image/jpeg",
         QUALITY
       );
     };
-    img.onerror = () => resolve(file); // fallback to original on error
+    img.onerror = () => resolve(file);
     img.src = url;
   });
 }
@@ -96,29 +95,29 @@ export function ImageUploader({ onUploadComplete, storagePath, disabled = false,
     toast({ title: "Uploading...", description: "Your image is being uploaded securely.", variant: "info" });
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '');
-      const fileName = `${user.uid}/${storagePath}/${Date.now()}-${sanitizedFileName}`;
+      // Get session token for API auth
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("No active session");
 
-      const { data, error } = await supabase.storage
-        .from('uploads')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
+      // Build form data
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('storagePath', storagePath);
 
-      if (error) throw error;
+      // Upload via API route to R2
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: formData,
+      });
 
-      const { data: urlData } = supabase.storage
-        .from('uploads')
-        .getPublicUrl(fileName);
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Upload failed');
 
-      if (urlData.publicUrl) {
-        onUploadComplete(urlData.publicUrl);
-        toast({ title: "Upload Successful", description: "Image has been added.", variant: "success" });
-      } else {
-        throw new Error("Failed to get public URL for uploaded image.");
-      }
+      onUploadComplete(result.url);
+      toast({ title: "Upload Successful", description: "Image has been added.", variant: "success" });
 
     } catch (error: any) {
       console.error("Upload Error:", error);
