@@ -252,8 +252,8 @@ export function VendorProfileForm({ onPublicViewClick }: VendorProfileFormProps)
     };
 
     const isChanged = JSON.stringify(vendor) !== JSON.stringify(initialVendor);
-    const uploadedPhotoCount = useMemo(() => vendor.photos?.filter(url => typeof url === 'string' && url.includes("supabase")).length || 0, [vendor.photos]);
-    const isUploadLimitReached = uploadedPhotoCount >= 3;
+    const uploadedPhotoCount = useMemo(() => vendor.photos?.filter(url => typeof url === 'string' && url.length > 0).length || 0, [vendor.photos]);
+    const isUploadLimitReached = uploadedPhotoCount >= 10;
 
     if (isLoading) {
         return (
@@ -288,7 +288,7 @@ export function VendorProfileForm({ onPublicViewClick }: VendorProfileFormProps)
                                 <Label htmlFor="logoUrl">Logo Upload</Label>
                                 <div className="flex items-center gap-2">
                                     <Input id="logoUrl" name="logoUrl" placeholder="Upload a logo to replace photo" value={""} readOnly />
-                                    <ImageUploader onUploadComplete={handleLogoUpload} storagePath="vendor-logos" />
+                                    <ImageUploader onUploadComplete={handleLogoUpload} storagePath="vendor-logos" oldUrl={vendor.logoUrl} />
                                 </div>
                             </div>
                         </div>
@@ -393,6 +393,11 @@ export function VendorProfileForm({ onPublicViewClick }: VendorProfileFormProps)
                     <CardDescription>Manage your business photos. The first image is used as a fallback logo.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                    {isUploadLimitReached && (
+                        <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+                            📸 You have reached the maximum of 10 photos. Please delete a photo before adding a new one.
+                        </div>
+                    )}
                     {vendor.photos && vendor.photos.length > 0 ? (
                         <Carousel className="w-full">
                             <CarouselContent>
@@ -431,7 +436,7 @@ export function VendorProfileForm({ onPublicViewClick }: VendorProfileFormProps)
                             <Button onClick={handleAddPhotoFromUrl} disabled={!photoUrlInput}>Add URL</Button>
                             <ImageUploader onUploadComplete={handlePhotoUpload} storagePath="vendor-photos" disabled={isUploadLimitReached} />
                         </div>
-                        {isUploadLimitReached && <p className="text-sm text-destructive font-medium">You have reached the 3-photo upload limit.</p>}
+                        {isUploadLimitReached && <p className="text-sm text-destructive font-medium">You have reached the maximum of 10 photos. Delete a photo to add more.</p>}
                     </div>
                 </CardContent>
             </Card>

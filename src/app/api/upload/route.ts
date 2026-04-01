@@ -3,7 +3,7 @@ export const runtime = 'edge';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-async function signedHeaders(method: string, key: string, contentType: string, body: ArrayBuffer) {
+async function getSignedHeaders(method: string, key: string, contentType: string, body: ArrayBuffer | null) {
   const accountId = process.env.R2_ACCOUNT_ID!;
   const accessKeyId = process.env.R2_ACCESS_KEY_ID!;
   const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY!;
@@ -16,8 +16,9 @@ async function signedHeaders(method: string, key: string, contentType: string, b
   const dateStamp = now.toISOString().slice(0, 10).replace(/-/g, '');
   const amzDate = now.toISOString().replace(/[:\-]|\.\d{3}/g, '');
 
+  const bodyBuffer = body || new ArrayBuffer(0);
   const payloadHash = Array.from(
-    new Uint8Array(await crypto.subtle.digest('SHA-256', body))
+    new Uint8Array(await crypto.subtle.digest('SHA-256', bodyBuffer))
   ).map(b => b.toString(16).padStart(2, '0')).join('');
 
   const canonicalHeaders = `content-type:${contentType}\nhost:${host}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}\n`;
@@ -49,6 +50,26 @@ async function signedHeaders(method: string, key: string, contentType: string, b
   };
 }
 
+async function deleteFromR2(oldUrl: string) {
+  try {
+    const publicUrl = process.env.R2_PUBLIC_URL!;
+    const accountId = process.env.R2_ACCOUNT_ID!;
+    const bucket = process.env.R2_BUCKET_NAME!;
+
+    // Extract key from public URL
+    const key = oldUrl.replace(`${publicUrl}/`, '');
+    if (!key || key === oldUrl) return; // URL doesn't match R2
+
+    const url = `https://${accountId}.r2.cloudflarestorage.com/${bucket}/${key}`;
+    const headers = await getSignedHeaders('DELETE', key, 'application/octet-stream', null);
+
+    await fetch(url, { method: 'DELETE', headers });
+  } catch (e) {
+    console.error('Failed to delete old file from R2:', e);
+    // Non-fatal — don't block the upload
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     // Verify user is authenticated
@@ -68,6 +89,7 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get('file') as File;
     const storagePath = formData.get('storagePath') as string;
+    const oldUrl = formData.get('oldUrl') as string | null;
 
     if (!file || !storagePath) return NextResponse.json({ error: 'Missing file or storagePath' }, { status: 400 });
 
@@ -79,12 +101,12 @@ export async function POST(req: NextRequest) {
     const buffer = await file.arrayBuffer();
     const contentType = file.type || 'image/jpeg';
 
-    // Sign and upload to R2
+    // Upload to R2
     const accountId = process.env.R2_ACCOUNT_ID!;
     const bucket = process.env.R2_BUCKET_NAME!;
     const url = `https://${accountId}.r2.cloudflarestorage.com/${bucket}/${key}`;
 
-    const headers = await signedHeaders('PUT', key, contentType, buffer);
+    const headers = await getSignedHeaders('PUT', key, contentType, buffer);
 
     const uploadResponse = await fetch(url, {
       method: 'PUT',
@@ -95,6 +117,11 @@ export async function POST(req: NextRequest) {
     if (!uploadResponse.ok) {
       const errText = await uploadResponse.text();
       throw new Error(`R2 upload failed: ${errText}`);
+    }
+
+    // Delete old file if provided
+    if (oldUrl && oldUrl.includes(process.env.R2_PUBLIC_URL!)) {
+      await deleteFromR2(oldUrl);
     }
 
     const publicUrl = `${process.env.R2_PUBLIC_URL}/${key}`;

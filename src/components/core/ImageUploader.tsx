@@ -13,6 +13,7 @@ interface ImageUploaderProps {
   storagePath: string;
   disabled?: boolean;
   maxSizeMb?: number;
+  oldUrl?: string; // Optional: URL of file to delete after successful upload
 }
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
@@ -62,7 +63,7 @@ async function compressImage(file: File): Promise<File> {
   });
 }
 
-export function ImageUploader({ onUploadComplete, storagePath, disabled = false, maxSizeMb = 2 }: ImageUploaderProps) {
+export function ImageUploader({ onUploadComplete, storagePath, disabled = false, maxSizeMb = 2, oldUrl }: ImageUploaderProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
@@ -95,7 +96,7 @@ export function ImageUploader({ onUploadComplete, storagePath, disabled = false,
     toast({ title: "Uploading...", description: "Your image is being uploaded securely.", variant: "info" });
 
     try {
-      // Get session token for API auth
+      // Get session token
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("No active session");
 
@@ -103,6 +104,7 @@ export function ImageUploader({ onUploadComplete, storagePath, disabled = false,
       const formData = new FormData();
       formData.append('file', file);
       formData.append('storagePath', storagePath);
+      if (oldUrl) formData.append('oldUrl', oldUrl);
 
       // Upload via API route to R2
       const response = await fetch('/api/upload', {
