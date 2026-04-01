@@ -42,3 +42,11 @@ firebase.json.local
 database-debug.log
 firestore-debug.log
 storage-debug.log
+.aider*
+.env
+.env
+.env
+.env
+.env
+.env
+functions/node_modules/

@@ -35,7 +35,8 @@ export interface ZippUser {
   uncollectedPromotions?: string[];
   createdAt: Date | string;
   updatedAt: Date | string;
-  vendorId?: string; 
+  vendorId?: string;
+  vendor_id?: string;
 }
 
 // This represents the Vendor structure in the denormalized JSON dataset
