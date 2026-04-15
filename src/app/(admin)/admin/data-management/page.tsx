@@ -8,7 +8,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Search, Loader2, Download } from 'lucide-react';
 import Fuse from 'fuse.js';
 import { VendorEditDialog } from './VendorEditDialog';
-import { VendorActions } from './VendorActions';
 import { Button } from '@/components/ui/button';
 import { DataImporterClientPage } from './DataImporterClientPage';
 import { PhotoMigrationCard } from './PhotoMigrationCard';
@@ -261,7 +260,7 @@ export default function DataManagementPage() {
                     <TableHead className="w-[35%]">Name</TableHead>
                     <TableHead className="w-[20%]">Phone</TableHead>
                     <TableHead className="w-[45%]">Address</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -270,9 +269,6 @@ export default function DataManagementPage() {
                       <TableCell className="font-medium">{vendor.name}</TableCell>
                       <TableCell className="text-sm">{stripCountryCode(vendor.phone)}</TableCell>
                       <TableCell className="text-sm">{vendor.address || 'N/A'}</TableCell>
-                      <TableCell className="text-right">
-                        <VendorActions vendor={{ ...vendor, id: vendor.vendor_id || vendor.id }} onEdit={handleEdit} onViewSummary={handleViewSummary} />
-                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
