@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import { useSupabaseCollection } from '@/lib/supabase/hooks';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -20,21 +19,60 @@ import { VendorSummaryDialog } from './VendorSummaryDialog';
 import * as XLSX from 'xlsx';
 
 const VENDORS_PER_PAGE = 15;
+const BATCH_SIZE = 1000;
+
+function stripCountryCode(phone?: string): string {
+  if (!phone) return 'N/A';
+  // Remove common country codes: +65, +1, +44, etc.
+  return phone.replace(/^\+\d{1,3}\s?/, '').trim() || phone;
+}
+
+async function fetchAllVendors(): Promise<any[]> {
+  let allVendors: any[] = [];
+  let from = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    const { data, error } = await supabase
+      .from('vendors')
+      .select('*')
+      .order('name')
+      .range(from, from + BATCH_SIZE - 1);
+
+    if (error) throw error;
+
+    if (data && data.length > 0) {
+      allVendors = [...allVendors, ...data];
+      from += BATCH_SIZE;
+      hasMore = data.length === BATCH_SIZE;
+    } else {
+      hasMore = false;
+    }
+  }
+
+  return allVendors;
+}
 
 export default function DataManagementPage() {
-  const vendorsQuery = useMemo(() => () => supabase.from('vendors').select('*').order('name'), []);
-  const { data: liveVendorsData, isLoading: isVendorDataLoading } = useSupabaseCollection<Vendor>(vendorsQuery);
+  const [liveVendors, setLiveVendors] = useState<any[]>([]);
+  const [isVendorDataLoading, setIsVendorDataLoading] = useState(true);
   const [vendorCount, setVendorCount] = useState<number>(0);
 
   useEffect(() => {
-    supabase.from('vendors').select('*', { count: 'exact', head: true }).then(({ count }) => {
-      setVendorCount(count || 0);
-    });
+    async function loadVendors() {
+      setIsVendorDataLoading(true);
+      try {
+        const vendors = await fetchAllVendors();
+        setLiveVendors(vendors);
+        setVendorCount(vendors.length);
+      } catch (err) {
+        console.error('Failed to load vendors:', err);
+      } finally {
+        setIsVendorDataLoading(false);
+      }
+    }
+    loadVendors();
   }, []);
-
-  const liveVendors = useMemo(() => {
-    return liveVendorsData?.map(v => ({ ...v, id: v.vendor_id || v.id })) || [];
-  }, [liveVendorsData]);
 
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,14 +81,15 @@ export default function DataManagementPage() {
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Use snake_case keys to match raw Supabase data
   const fuse = useMemo(() => {
-    if (!liveVendors) return null;
+    if (!liveVendors.length) return null;
     return new Fuse(liveVendors, {
       keys: [
         { name: 'name', weight: 0.5 },
         { name: 'tags', weight: 0.2 },
-        { name: 'matchedKeywords', weight: 0.2 },
-        { name: 'categoryId', weight: 0.1 },
+        { name: 'matched_keywords', weight: 0.2 },
+        { name: 'category_id', weight: 0.1 },
       ],
       threshold: 0.3,
       includeScore: true,
@@ -77,13 +116,13 @@ export default function DataManagementPage() {
     setCurrentPage(1);
   };
 
-  const handleEdit = (vendor: Vendor) => {
-    setSelectedVendorId(vendor.id);
+  const handleEdit = (vendor: any) => {
+    setSelectedVendorId(vendor.vendor_id || vendor.id);
     setIsEditDialogOpen(true);
   };
 
-  const handleViewSummary = (vendor: Vendor) => {
-    setSelectedVendorId(vendor.id);
+  const handleViewSummary = (vendor: any) => {
+    setSelectedVendorId(vendor.vendor_id || vendor.id);
     setIsSummaryDialogOpen(true);
   };
 
@@ -97,14 +136,16 @@ export default function DataManagementPage() {
     const exportData = liveVendors.map(v => ({
       Name: v.name || '',
       Address: v.address || '',
-      Phone: v.phone || '',
+      Phone: stripCountryCode(v.phone),
       Email: v.email || '',
-      Category: v.categoryId || '',
+      Category: v.category_id || '',
       Region: v.region || '',
       Website: v.website || '',
-      'Google Rating': v.googleRating || '',
-      'Zipp Rating': v.zippRating || '',
-      'Subscription Status': v.subscriptionStatus || '',
+      'Google Rating': v.google_rating || '',
+      'Google Reviews': v.google_review_count || '',
+      'Zipp Rating': v.zipp_rating || '',
+      'Zipp Reviews': v.zipp_review_count || '',
+      'Subscription Status': v.subscription_status || '',
     }));
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
@@ -172,20 +213,20 @@ export default function DataManagementPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Address</TableHead>
+                    <TableHead className="w-[35%]">Name</TableHead>
+                    <TableHead className="w-[20%]">Phone</TableHead>
+                    <TableHead className="w-[45%]">Address</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paginatedVendors.map((vendor) => (
-                    <TableRow key={vendor.id}>
+                    <TableRow key={vendor.vendor_id || vendor.id}>
                       <TableCell className="font-medium">{vendor.name}</TableCell>
-                      <TableCell className="text-sm">{vendor.phone || 'N/A'}</TableCell>
+                      <TableCell className="text-sm">{stripCountryCode(vendor.phone)}</TableCell>
                       <TableCell className="text-sm">{vendor.address || 'N/A'}</TableCell>
                       <TableCell className="text-right">
-                        <VendorActions vendor={vendor} onEdit={handleEdit} onViewSummary={handleViewSummary} />
+                        <VendorActions vendor={{ ...vendor, id: vendor.vendor_id || vendor.id }} onEdit={handleEdit} onViewSummary={handleViewSummary} />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -195,7 +236,7 @@ export default function DataManagementPage() {
               {totalPages > 1 && (
                 <div className="flex items-center justify-between mt-4">
                   <p className="text-sm text-muted-foreground">
-                    Page {currentPage} of {totalPages}
+                    Page {currentPage} of {totalPages} ({filteredVendors.length} vendors)
                   </p>
                   <div className="flex gap-2">
                     <Button
