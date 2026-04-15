@@ -1,106 +1,24 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Edit, MoreVertical, Trash2, FileText, Loader2 } from "lucide-react";
-import { supabase } from "@/lib/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { ExternalLink } from "lucide-react";
 import type { Vendor } from "@/lib/types";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 interface VendorActionsProps {
   vendor: Vendor;
-  onEdit: () => void;
-  onViewSummary: () => void;
+  onEdit: (vendor: any) => void;
+  onViewSummary: (vendor: any) => void;
 }
 
-export function VendorActions({ vendor, onEdit, onViewSummary }: VendorActionsProps) {
-  const { toast } = useToast();
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-
-  const handleDeleteInitiated = () => {
-    setIsConfirmOpen(true);
-  };
-
-  const confirmDelete = async () => {
-    setIsDeleting(true);
-    setIsConfirmOpen(false);
-    try {
-      const { error } = await supabase
-        .from('vendors')
-        .delete()
-        .eq('vendor_id', vendor.id);
-      
-      if (error) throw error;
-
-      toast({ title: "Vendor Deleted", description: `"${vendor.name}" has been removed.`, variant: "destructive" });
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message || "Failed to delete vendor.", variant: "destructive" });
-    } finally {
-      setIsDeleting(false);
-    }
+export function VendorActions({ vendor }: VendorActionsProps) {
+  const handleView = () => {
+    window.open(`/vendor/${vendor.id}`, '_blank');
   };
 
   return (
-    <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="h-8 w-8 p-0" disabled={isDeleting}>
-            <span className="sr-only">Open menu</span>
-            {isDeleting ? <Loader2 className="h-4 w-4 animate-spin"/> : <MoreVertical className="h-4 w-4" />}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={onViewSummary}>
-            <FileText className="mr-2 h-4 w-4" />
-            Summary
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={onEdit}>
-            <Edit className="mr-2 h-4 w-4" />
-            Edit
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleDeleteInitiated}>
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the vendor "{vendor.name}" from the database.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              Continue
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+    <Button variant="outline" size="sm" onClick={handleView} className="flex items-center gap-1">
+      <ExternalLink className="h-3.5 w-3.5" />
+      View
+    </Button>
   );
 }
