@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Search, Loader2, Download } from 'lucide-react';
-import type { Vendor } from '@/lib/types';
 import Fuse from 'fuse.js';
 import { VendorEditDialog } from './VendorEditDialog';
 import { VendorActions } from './VendorActions';
@@ -16,14 +15,21 @@ import { PhotoMigrationCard } from './PhotoMigrationCard';
 import { BackupTool } from "./BackupTool";
 import { UserDataCard } from './UserDataCard';
 import { VendorSummaryDialog } from './VendorSummaryDialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import * as XLSX from 'xlsx';
 
 const VENDORS_PER_PAGE = 15;
 const BATCH_SIZE = 1000;
 
+const CATEGORIES = [
+  { id: 'car care', name: 'Car Care' },
+  { id: 'cleaning services', name: 'Cleaning Services' },
+  { id: 'handyman services', name: 'Handyman Services' },
+  { id: 'mobile device repair', name: 'Mobile Device Repair' },
+];
+
 function stripCountryCode(phone?: string): string {
   if (!phone) return 'N/A';
-  // Remove common country codes: +65, +1, +44, etc.
   return phone.replace(/^\+\d{1,3}\s?/, '').trim() || phone;
 }
 
@@ -31,16 +37,13 @@ async function fetchAllVendors(): Promise<any[]> {
   let allVendors: any[] = [];
   let from = 0;
   let hasMore = true;
-
   while (hasMore) {
     const { data, error } = await supabase
       .from('vendors')
       .select('*')
       .order('name')
       .range(from, from + BATCH_SIZE - 1);
-
     if (error) throw error;
-
     if (data && data.length > 0) {
       allVendors = [...allVendors, ...data];
       from += BATCH_SIZE;
@@ -49,7 +52,6 @@ async function fetchAllVendors(): Promise<any[]> {
       hasMore = false;
     }
   }
-
   return allVendors;
 }
 
@@ -76,12 +78,12 @@ export default function DataManagementPage() {
 
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedVendorId, setSelectedVendorId] = useState<string | undefined>(undefined);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Use snake_case keys to match raw Supabase data
   const fuse = useMemo(() => {
     if (!liveVendors.length) return null;
     return new Fuse(liveVendors, {
@@ -98,10 +100,19 @@ export default function DataManagementPage() {
   }, [liveVendors]);
 
   const filteredVendors = useMemo(() => {
-    if (!searchQuery) return liveVendors;
-    if (!fuse) return [];
-    return fuse.search(searchQuery).map((result) => result.item);
-  }, [searchQuery, liveVendors, fuse]);
+    let results = liveVendors;
+
+    if (searchQuery) {
+      if (!fuse) return [];
+      results = fuse.search(searchQuery).map((result) => result.item);
+    }
+
+    if (selectedCategory !== 'all') {
+      results = results.filter(v => v.category_id === selectedCategory);
+    }
+
+    return results;
+  }, [searchQuery, selectedCategory, liveVendors, fuse]);
 
   const totalPages = Math.max(1, Math.ceil(filteredVendors.length / VENDORS_PER_PAGE));
 
@@ -113,6 +124,11 @@ export default function DataManagementPage() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setSearchQuery(searchInput);
+    setCurrentPage(1);
+  };
+
+  const handleCategoryChange = (value: string) => {
+    setSelectedCategory(value);
     setCurrentPage(1);
   };
 
@@ -132,25 +148,33 @@ export default function DataManagementPage() {
     }
   };
 
-  const handleExport = () => {
-    const exportData = liveVendors.map(v => ({
-      Name: v.name || '',
-      Address: v.address || '',
-      Phone: stripCountryCode(v.phone),
-      Email: v.email || '',
-      Category: v.category_id || '',
-      Region: v.region || '',
-      Website: v.website || '',
-      'Google Rating': v.google_rating || '',
-      'Google Reviews': v.google_review_count || '',
-      'Zipp Rating': v.zipp_rating || '',
-      'Zipp Reviews': v.zipp_review_count || '',
-      'Subscription Status': v.subscription_status || '',
-    }));
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
+  const buildExportData = (vendors: any[]) => vendors.map(v => ({
+    Name: v.name || '',
+    Address: v.address || '',
+    Phone: stripCountryCode(v.phone),
+    Email: v.email || '',
+    Category: v.category_id || '',
+    Region: v.region || '',
+    Website: v.website || '',
+    'Google Rating': v.google_rating || '',
+    'Google Reviews': v.google_review_count || '',
+    'Zipp Rating': v.zipp_rating || '',
+    'Zipp Reviews': v.zipp_review_count || '',
+    'Subscription Status': v.subscription_status || '',
+  }));
+
+  const handleExportAll = () => {
+    const worksheet = XLSX.utils.json_to_sheet(buildExportData(liveVendors));
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Vendors');
-    XLSX.writeFile(workbook, 'vendor_database.xlsx');
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'All Vendors');
+    XLSX.writeFile(workbook, 'vendor_database_full.xlsx');
+  };
+
+  const handleExportResults = () => {
+    const worksheet = XLSX.utils.json_to_sheet(buildExportData(filteredVendors));
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Filtered Vendors');
+    XLSX.writeFile(workbook, 'vendor_database_filtered.xlsx');
   };
 
   return (
@@ -178,29 +202,50 @@ export default function DataManagementPage() {
               <CardTitle>Live Vendor Database</CardTitle>
               <CardDescription>Browse all vendors in Supabase ({vendorCount} total).</CardDescription>
             </div>
-            <Button onClick={handleExport} variant="outline" className="flex items-center gap-2">
-              <Download className="h-4 w-4" />
-              Export to Excel
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={handleExportResults} variant="outline" className="flex items-center gap-2">
+                <Download className="h-4 w-4" />
+                Export Results
+              </Button>
+              <Button onClick={handleExportAll} variant="outline" className="flex items-center gap-2">
+                <Download className="h-4 w-4" />
+                Export Entire Database
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSearch} className="relative mb-4 flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search vendors..."
-                className="pl-8"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-              />
-            </div>
-            <Button type="submit">Search</Button>
-          </form>
+          <div className="flex gap-2 mb-4">
+            <form onSubmit={handleSearch} className="flex gap-2 flex-1">
+              <div className="relative flex-1">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search vendors..."
+                  className="pl-8"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                />
+              </div>
+              <Button type="submit">Search</Button>
+            </form>
+            <Select value={selectedCategory} onValueChange={handleCategoryChange}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {CATEGORIES.map(cat => (
+                  <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          {searchQuery && (
+          {(searchQuery || selectedCategory !== 'all') && (
             <p className="text-sm text-muted-foreground mb-3">
-              {filteredVendors.length} {filteredVendors.length === 1 ? 'vendor' : 'vendors'} found for &quot;{searchQuery}&quot;
+              {filteredVendors.length} {filteredVendors.length === 1 ? 'vendor' : 'vendors'} found
+              {searchQuery ? ` for "${searchQuery}"` : ''}
+              {selectedCategory !== 'all' ? ` in ${CATEGORIES.find(c => c.id === selectedCategory)?.name}` : ''}
             </p>
           )}
 
